@@ -5,12 +5,17 @@ import { headers } from "next/headers";
 import { DashboardShell } from "@/components/referrals/dashboard-shell";
 import { LoginShell } from "@/components/referrals/login-shell";
 import { MockServerState } from "@/components/referrals/mock-server-state";
+import { acceptReferralTermsAction } from "@/app/referal/actions";
 import {
   getMockUserById,
   getReferrerDashboardData,
 } from "@/lib/referrals/get-referrer-dashboard";
 import { REFERRAL_SESSION_COOKIE } from "@/lib/referrals/mock-session";
-import type { ReferrerDashboardData, SessionUser } from "@/lib/referrals/types";
+import type {
+  ReferralTermsAcceptQueryError,
+  ReferrerDashboardData,
+  SessionUser,
+} from "@/lib/referrals/types";
 
 export const metadata: Metadata = {
   title: "Referrer Dashboard",
@@ -70,8 +75,8 @@ export default async function ReferralPage({
   if (hasMockApiError) {
     return (
       <MockServerState
-        title="Referral mock data is unavailable"
-        description="We could not load the signed-in referral dashboard from the local json-server."
+        title="Referral data is unavailable"
+        description="We could not load the signed-in referral dashboard. This is unexpected because demo users and dashboards are bundled with the app."
       />
     );
   }
@@ -80,13 +85,20 @@ export default async function ReferralPage({
     return <LoginShell error="session-expired" />;
   }
 
+  const termsError: ReferralTermsAcceptQueryError | undefined =
+    termsErrorParam === "server-unavailable" ||
+    termsErrorParam === "terms-misconfigured" ||
+    termsErrorParam === "terms-unavailable" ||
+    termsErrorParam === "terms-rejected"
+      ? termsErrorParam
+      : undefined;
+
   return (
     <DashboardShell
       data={data}
       user={user}
-      termsError={
-        termsErrorParam === "server-unavailable" ? termsErrorParam : undefined
-      }
+      termsError={termsError}
+      termsAcceptAction={acceptReferralTermsAction}
     />
   );
 }

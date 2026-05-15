@@ -12,17 +12,17 @@ export function MockServerState({
       <div className="mx-auto flex min-h-screen max-w-3xl items-center px-4 py-10 sm:px-6 lg:px-8">
         <section className="w-full rounded-[32px] border border-slate-200 bg-white p-8 text-center shadow-[0_20px_60px_rgba(15,23,42,0.08)] sm:p-10">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sky-700">
-            Local mock API
+            Referral dashboard
           </p>
           <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">
             {title}
           </h1>
           <p className="mt-4 text-base leading-7 text-slate-600">{description}</p>
           <div className="mt-8 rounded-[24px] border border-sky-100 bg-sky-50 px-5 py-5 text-left text-sm leading-6 text-slate-700">
-            <p className="font-semibold text-slate-950">How to fix it</p>
+            <p className="font-semibold text-slate-950">What you can try</p>
             <p className="mt-2">
-              Start the local mock API with `npm run mock:server`, or launch both
-              services together with `npm run dev:mock`.
+              Refresh the page. If the problem continues, sign out and sign in again
+              with the seeded demo accounts shown on the login screen.
             </p>
           </div>
           <a

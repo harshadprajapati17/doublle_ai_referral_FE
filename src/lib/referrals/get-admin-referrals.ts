@@ -1,6 +1,10 @@
 import "server-only";
 
-import { fetchMockApi } from "@/lib/referrals/mock-api";
+import {
+  listMockDashboards,
+  listMockSignupSubmissions,
+  listMockUsers,
+} from "@/lib/referrals/mock-store";
 import type {
   AdminReferralRow,
   MockSignupSubmissionRecord,
@@ -102,11 +106,9 @@ function fromSignupSubmission(
 }
 
 export async function getAdminReferralRows(): Promise<AdminReferralRow[]> {
-  const [users, dashboards, submissions] = await Promise.all([
-    fetchMockApi<MockUserRecord[]>("/users"),
-    fetchMockApi<ReferrerDashboardRecord[]>("/dashboards"),
-    fetchMockApi<MockSignupSubmissionRecord[]>("/signupSubmissions"),
-  ]);
+  const users = listMockUsers();
+  const dashboards = listMockDashboards();
+  const submissions = listMockSignupSubmissions();
 
   const usersById = new Map(users.map((user) => [user.id, user]));
   const dashboardsByUserId = new Map(

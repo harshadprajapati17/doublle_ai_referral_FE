@@ -1,7 +1,11 @@
 import "server-only";
 
 import { calculateReferralCommission, getMockPlanById } from "@/lib/referrals/mock-plans";
-import { fetchMockApi } from "@/lib/referrals/mock-api";
+import {
+  addMockSignupSubmission,
+  listMockSignupSubmissions,
+  listMockSignupSubmissionsByReferralCode,
+} from "@/lib/referrals/mock-store";
 import type { MockSignupSubmissionRecord } from "@/lib/referrals/types";
 
 function deriveCompanyName(workEmail: string) {
@@ -28,37 +32,31 @@ export async function createMockSignupSubmission(input: {
     throw new Error(`Unknown mock plan: ${input.planId}`);
   }
 
-  return fetchMockApi<MockSignupSubmissionRecord>("/signupSubmissions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      id: crypto.randomUUID(),
-      referrerUserId: input.referrerUserId,
-      workEmail: input.workEmail,
-      companyName: deriveCompanyName(input.workEmail),
-      referralCode: input.referralCode,
-      planId: plan.id,
-      planName: plan.name,
-      monthlyRevenue: plan.monthlyRevenue,
-      labelMonthlyRevenue: plan.labelMonthlyRevenue,
-      commissionAmount: calculateReferralCommission(plan.monthlyRevenue),
-      source: input.source ?? "local-signup",
-      status: "paid",
-      createdAt: new Date().toISOString(),
-    }),
-  });
+  const record: MockSignupSubmissionRecord = {
+    id: crypto.randomUUID(),
+    referrerUserId: input.referrerUserId,
+    workEmail: input.workEmail,
+    companyName: deriveCompanyName(input.workEmail),
+    referralCode: input.referralCode.trim().toUpperCase(),
+    planId: plan.id,
+    planName: plan.name,
+    monthlyRevenue: plan.monthlyRevenue,
+    labelMonthlyRevenue: plan.labelMonthlyRevenue,
+    commissionAmount: calculateReferralCommission(plan.monthlyRevenue),
+    source: input.source ?? "local-signup",
+    status: "paid",
+    createdAt: new Date().toISOString(),
+  };
+
+  return addMockSignupSubmission(record);
 }
 
 export async function getRecentMockSignupSubmissions(
   referralCode?: string,
 ): Promise<MockSignupSubmissionRecord[]> {
-  const query = referralCode
-    ? `/signupSubmissions?referralCode=${encodeURIComponent(referralCode)}`
-    : "/signupSubmissions";
-
-  const submissions = await fetchMockApi<MockSignupSubmissionRecord[]>(query);
+  const submissions = referralCode
+    ? listMockSignupSubmissionsByReferralCode(referralCode)
+    : listMockSignupSubmissions();
 
   return submissions
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt))

@@ -1,11 +1,20 @@
 import "server-only";
 
 import { formatCurrency } from "@/lib/referrals/format";
-import { fetchMockApi } from "@/lib/referrals/mock-api";
-import { getLatestMockTermsAcceptance } from "@/lib/referrals/mock-terms";
+import {
+  fetchReferralMe,
+  isReferralApiConfigured,
+} from "@/lib/referrals/fetch-referral-me";
+import {
+  findMockDashboardByReferralCode,
+  findMockDashboardsByUserId,
+  findMockUserByEmailAndPassword,
+  findMockUserById,
+  listMockSignupSubmissionsByReferralCode,
+} from "@/lib/referrals/mock-store";
 import type {
-  MockUserRecord,
   MockSignupSubmissionRecord,
+  MockUserRecord,
   RefereeData,
   ReferrerDashboardData,
   ReferrerDashboardRecord,
@@ -30,18 +39,27 @@ function withLocalShareUrl(
     return data;
   }
 
-  const shareUrl = new URL(data.hero.shareUrl);
-  const localSignupUrl = new URL("/signup", appBaseUrl);
+  let ref = "";
+  try {
+    ref =
+      new URL(data.hero.shareUrl).searchParams.get("ref")?.trim() ??
+      data.hero.code?.trim() ??
+      "";
+  } catch {
+    ref = data.hero.code?.trim() ?? "";
+  }
 
-  shareUrl.protocol = localSignupUrl.protocol;
-  shareUrl.host = localSignupUrl.host;
-  shareUrl.pathname = localSignupUrl.pathname;
+  const localSignupUrl = new URL("/signup", appBaseUrl);
+  if (ref) {
+    localSignupUrl.searchParams.set("ref", ref);
+  }
 
   return {
     ...data,
     hero: {
       ...data.hero,
-      shareUrl: shareUrl.toString(),
+      shareUrl: localSignupUrl.toString(),
+      code: ref || data.hero.code,
     },
   };
 }
@@ -197,27 +215,50 @@ export async function getReferrerDashboardData(
   userId: string,
   appBaseUrl?: string,
 ): Promise<ReferrerDashboardData | null> {
-  const dashboards = await fetchMockApi<ReferrerDashboardRecord[]>(
-    `/dashboards?userId=${encodeURIComponent(userId)}`,
-  );
+  const dashboards = findMockDashboardsByUserId(userId);
   const dashboard = dashboards[0];
 
   if (!dashboard) {
     return null;
   }
 
-  const submissions = await fetchMockApi<MockSignupSubmissionRecord[]>(
-    `/signupSubmissions?referralCode=${encodeURIComponent(dashboard.hero.code)}`,
+  const submissions = listMockSignupSubmissionsByReferralCode(
+    dashboard.hero.code,
   );
-  const latestTermsAcceptance = await getLatestMockTermsAcceptance(userId);
-  const currentTermsAccepted =
-    latestTermsAcceptance?.programId === dashboard.programTerms.programId &&
-    latestTermsAcceptance.version === dashboard.programTerms.version;
+  const merged = mergeDashboardData(dashboard, submissions);
+
+  let termsAcceptance: ReferrerDashboardData["termsAcceptance"] = null;
+  let hero = merged.hero;
+
+  if (isReferralApiConfigured()) {
+    const me = await fetchReferralMe();
+    if (me?.programId && me.referralUrl) {
+      termsAcceptance = {
+        programId: me.programId,
+        version: me.termsVersion,
+        acceptedAt: me.createdAt ?? new Date().toISOString(),
+        ipAddress: "referral-api",
+      };
+      hero = {
+        ...hero,
+        code: me.code || hero.code,
+        shareUrl: me.referralUrl,
+      };
+    }
+  } else {
+    termsAcceptance = {
+      programId: dashboard.programTerms.programId,
+      version: dashboard.programTerms.version,
+      acceptedAt: new Date(0).toISOString(),
+      ipAddress: "local-mock",
+    };
+  }
 
   return withLocalShareUrl(
     {
-      ...mergeDashboardData(dashboard, submissions),
-      termsAcceptance: currentTermsAccepted ? latestTermsAcceptance : null,
+      ...merged,
+      hero,
+      termsAcceptance,
     },
     appBaseUrl,
   );
@@ -230,25 +271,15 @@ export async function getMockUserByCredentials({
   email: string;
   password: string;
 }): Promise<SessionUser | null> {
-  const users = await fetchMockApi<MockUserRecord[]>(
-    `/users?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
-  );
-  const user = users[0];
-
+  const user = findMockUserByEmailAndPassword(email, password);
   return user ? toSessionUser(user) : null;
 }
 
 export async function getMockUserById(userId: string): Promise<SessionUser | null> {
-  const users = await fetchMockApi<MockUserRecord[]>(
-    `/users?id=${encodeURIComponent(userId)}`,
-  );
-  const user = users[0];
-
+  const user = findMockUserById(userId);
   return user ? toSessionUser(user) : null;
 }
 
 export async function getDashboardByReferralCode(code: string) {
-  const dashboards = await fetchMockApi<ReferrerDashboardRecord[]>("/dashboards");
-
-  return dashboards.find((dashboard) => dashboard.hero.code === code) ?? null;
+  return findMockDashboardByReferralCode(code) ?? null;
 }

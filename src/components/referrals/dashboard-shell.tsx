@@ -4,23 +4,30 @@ import { ProgramTermsPanel } from "@/components/referrals/program-terms-panel";
 import { RefereesTable } from "@/components/referrals/referees-table";
 import { StatsStrip } from "@/components/referrals/stats-strip";
 import { TransactionsPanel } from "@/components/referrals/transactions-panel";
-import type { ReferrerDashboardData, SessionUser } from "@/lib/referrals/types";
+import type {
+  ReferralTermsAcceptFormAction,
+  ReferralTermsAcceptQueryError,
+  ReferrerDashboardData,
+  SessionUser,
+} from "@/lib/referrals/types";
 
 interface DashboardShellProps {
   data: ReferrerDashboardData;
   user: SessionUser;
-  termsError?: "server-unavailable";
+  termsError?: ReferralTermsAcceptQueryError;
+  termsAcceptAction: ReferralTermsAcceptFormAction;
 }
 
 function TermsGatePreview({
   data,
   user,
   termsError,
+  termsAcceptAction,
 }: DashboardShellProps) {
   return (
     <section
       id="overview"
-      className="relative isolate flex min-h-full flex-1 overflow-hidden rounded-[32px] border border-slate-200 bg-white/95 shadow-[0_20px_60px_rgba(15,23,42,0.08)]"
+      className="relative flex min-h-[32rem] w-full flex-1 flex-col overflow-hidden rounded-[32px] border border-slate-200 bg-white/95 shadow-[0_20px_60px_rgba(15,23,42,0.08)]"
     >
       <div
         aria-hidden="true"
@@ -127,8 +134,8 @@ function TermsGatePreview({
 
       <ProgramTermsModal
         terms={data.programTerms}
-        userId={user.id}
         error={termsError}
+        termsAcceptAction={termsAcceptAction}
       />
     </section>
   );
@@ -154,6 +161,7 @@ export function DashboardShell({
   data,
   user,
   termsError,
+  termsAcceptAction,
 }: DashboardShellProps) {
   const hasAcceptedTerms = Boolean(data.termsAcceptance);
   const hasReferralActivity =
@@ -225,7 +233,12 @@ export function DashboardShell({
             }`}
           >
             {showTermsGate ? (
-              <TermsGatePreview data={data} user={user} termsError={termsError} />
+              <TermsGatePreview
+                data={data}
+                user={user}
+                termsError={termsError}
+                termsAcceptAction={termsAcceptAction}
+              />
             ) : !hasReferralActivity ? (
               <InitialReferralState data={data} />
             ) : (

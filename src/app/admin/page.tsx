@@ -24,7 +24,7 @@ export default async function AdminPage() {
     return (
       <MockServerState
         title="Admin referral data is unavailable"
-        description="We could not load referral records for the internal admin route from the local json-server."
+        description="We could not load referral records for the internal admin route. Demo data is served from the same in-app mock store as the referral dashboard."
       />
     );
   }
@@ -40,9 +40,9 @@ export default async function AdminPage() {
             Referral operations
           </h1>
           <p className="max-w-3xl text-base leading-7 text-slate-600">
-            This route uses the same local mock database as the referral dashboard
-            and signup flow, giving you a single referral list table for operator
-            review.
+            This route reads the same in-app mock referral store as the referral
+            dashboard and signup flow, giving you a single referral list table for
+            operator review.
           </p>
         </header>
 

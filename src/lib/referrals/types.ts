@@ -1,4 +1,15 @@
+export type ReferralTermsAcceptFormAction = (
+  formData: FormData,
+) => Promise<void>;
+
 export type CommissionState = "pending" | "earned" | "paid" | "clawedBack";
+
+/** `termsError` query param after accept-referral-terms server action redirect */
+export type ReferralTermsAcceptQueryError =
+  | "server-unavailable"
+  | "terms-misconfigured"
+  | "terms-unavailable"
+  | "terms-rejected";
 
 export type StatId =
   | "clicks"
@@ -141,9 +152,4 @@ export interface MockSignupSubmissionRecord {
   source: string;
   status: "paid";
   createdAt: string;
-}
-
-export interface MockTermsAcceptanceRecord extends TermsAcceptanceData {
-  id: string;
-  userId: string;
 }

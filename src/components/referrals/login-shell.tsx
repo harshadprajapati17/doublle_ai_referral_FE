@@ -19,7 +19,7 @@ const errorMessages: Record<NonNullable<LoginShellProps["error"]>, string> = {
   "invalid-credentials": "Those dummy credentials did not match any local mock user.",
   "missing-credentials": "Enter both email and password to continue.",
   "server-unavailable":
-    "The local json-server is not reachable. Start it with `npm run mock:server` or `npm run dev:mock`.",
+    "Sign-in failed unexpectedly. Refresh the page and try again, or restart the dev server if you were editing mock data.",
   "session-expired": "Your mock session is no longer valid. Sign in again.",
 };
 
@@ -36,9 +36,8 @@ export function LoginShell({ error }: LoginShellProps) {
               Mock login for the in-app referral dashboard
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">
-              This screen uses dummy credentials and a local `json-server` dataset.
-              Once signed in, the referral dashboard loads from the mock API instead
-              of bundled JSON imports.
+              This screen uses demo credentials and in-app mock data bundled with the
+              Next.js server. No separate mock API process is required.
             </p>
 
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -124,8 +123,10 @@ export function LoginShell({ error }: LoginShellProps) {
             <div className="mt-6 rounded-[24px] border border-sky-100 bg-sky-50 px-5 py-5 text-sm leading-6 text-slate-700">
               <p className="font-semibold text-slate-950">Local setup</p>
               <p className="mt-2">
-                Run `npm run mock:server` to start the seeded json-server, or use
-                `npm run dev:mock` to run Next.js and the mock API together.
+                Run `npm run dev` and open this route. Signup submissions are kept in
+                server memory until you restart the dev server. Terms acceptance and
+                your referral link come from the referral API when AUTH_API_BASE_URL
+                and a bearer token are set.
               </p>
             </div>
           </div>
