@@ -1,19 +1,20 @@
 import type {
   ProgramTermsData,
-  ReferralTermsAcceptFormAction,
   ReferralTermsAcceptQueryError,
 } from "@/lib/referrals/types";
 
 interface ProgramTermsModalProps {
   terms: ProgramTermsData;
   error?: ReferralTermsAcceptQueryError;
-  termsAcceptAction: ReferralTermsAcceptFormAction;
+  onAcceptTerms: () => void | Promise<void>;
+  acceptPending?: boolean;
 }
 
 export function ProgramTermsModal({
   terms,
   error,
-  termsAcceptAction,
+  onAcceptTerms,
+  acceptPending = false,
 }: ProgramTermsModalProps) {
   return (
     <div className="absolute inset-0 z-[100] flex flex-col bg-slate-950/45 p-4 sm:p-6">
@@ -57,22 +58,21 @@ export function ProgramTermsModal({
                 {error === "server-unavailable"
                   ? "We could not reach the referral API to accept terms. Check the server log, then try again."
                   : error === "terms-misconfigured"
-                    ? "Referral API is not configured: set AUTH_API_BASE_URL and REFERRAL_API_BEARER_TOKEN (or REFERRAL_TERMS_DEMO_BEARER_TOKEN) on the server."
+                    ? "Referral API is not configured: set NEXT_PUBLIC_AUTH_API_BASE_URL."
                     : error === "terms-rejected"
-                      ? "The referral API rejected this terms acceptance. Check that your bearer token is valid."
-                      : "The referral API is not reachable. Ensure the service at AUTH_API_BASE_URL is running, then try again."}
+                      ? "Sign in again, then accept terms. Your session may have expired."
+                      : "The referral API is not reachable. Check DevTools → Network, then try again."}
               </div>
             ) : null}
 
-            <form action={termsAcceptAction} className="mt-6">
-              <input type="hidden" name="returnTo" value="/referal" />
-              <button
-                type="submit"
-                className="inline-flex w-full items-center justify-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-              >
-                Accept terms and continue
-              </button>
-            </form>
+            <button
+              type="button"
+              disabled={acceptPending}
+              onClick={() => void onAcceptTerms()}
+              className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {acceptPending ? "Accepting…" : "Accept terms and continue"}
+            </button>
           </div>
         </section>
       </div>

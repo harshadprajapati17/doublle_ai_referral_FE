@@ -19,7 +19,7 @@ export default async function Home({ searchParams }: HomeProps) {
     });
   });
 
-  const destination = query.size > 0 ? `/referal?${query.toString()}` : "/referal";
+  const destination = query.size > 0 ? `/login?${query.toString()}` : "/login";
 
   redirect(destination);
 }

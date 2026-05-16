@@ -1,33 +1,15 @@
 import type { Metadata } from "next";
 
 import { AdminReferralsTable } from "@/components/referrals/admin-referrals-table";
-import { MockServerState } from "@/components/referrals/mock-server-state";
 import { getAdminReferralRows } from "@/lib/referrals/get-admin-referrals";
 
 export const metadata: Metadata = {
   title: "Admin Referrals",
-  description:
-    "Internal admin route for reviewing referral records from the local mock dataset.",
+  description: "Internal admin route for reviewing referral records from the backend.",
 };
 
 export default async function AdminPage() {
-  let referrals = null;
-  let hasMockApiError = false;
-
-  try {
-    referrals = await getAdminReferralRows();
-  } catch {
-    hasMockApiError = true;
-  }
-
-  if (hasMockApiError || !referrals) {
-    return (
-      <MockServerState
-        title="Admin referral data is unavailable"
-        description="We could not load referral records for the internal admin route. Demo data is served from the same in-app mock store as the referral dashboard."
-      />
-    );
-  }
+  const referrals = await getAdminReferralRows();
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.12),_transparent_28%),linear-gradient(180deg,_#f8fbff_0%,_#eef4fb_100%)]">
@@ -40,9 +22,8 @@ export default async function AdminPage() {
             Referral operations
           </h1>
           <p className="max-w-3xl text-base leading-7 text-slate-600">
-            This route reads the same in-app mock referral store as the referral
-            dashboard and signup flow, giving you a single referral list table for
-            operator review.
+            Connect this view to your admin referral API when you need operator tooling.
+            Until then this table stays empty by design.
           </p>
         </header>
 

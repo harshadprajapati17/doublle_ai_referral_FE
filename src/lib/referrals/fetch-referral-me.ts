@@ -1,125 +1,83 @@
 import "server-only";
 
-function bearerFromEnv(): string | null {
-  const raw =
-    process.env.REFERRAL_API_BEARER_TOKEN?.trim() ??
-    process.env.REFERRAL_TERMS_DEMO_BEARER_TOKEN?.trim();
-  if (!raw) {
-    return null;
-  }
-  const token = raw.replace(/^Bearer\s+/i, "").trim();
-  return token || null;
-}
+import { getAuthApiBase, referralApiHeaders } from "@/lib/referrals/auth-api";
+import { fetchReferralProgram } from "@/lib/referrals/fetch-referral-program";
+import {
+  composeReferralEnrollment,
+  isPendingEnrollmentNotFound,
+  parseReferralMeJson,
+  type ReferralMeFetchResult,
+  type ReferralMePayload,
+} from "@/lib/referrals/referral-payload";
 
-export function getReferralApiAuth(): { base: string; bearer: string } | null {
-  const base = process.env.AUTH_API_BASE_URL?.trim();
-  const bearer = bearerFromEnv();
-  if (!base || !bearer) {
-    return null;
-  }
-  return { base, bearer };
-}
+export type { ReferralMePayload };
 
-/** True when GET /referral/me (and terms POST) can be called with env auth. */
-export function isReferralApiConfigured(): boolean {
-  return getReferralApiAuth() !== null;
-}
-
-export type ReferralMePayload = {
-  programId: string;
-  termsVersion: string;
-  code: string;
-  referralUrl: string;
-  createdAt?: string;
-};
-
-/**
- * GET {AUTH_API_BASE_URL}/api/v1/referral/me
- * When `data.programId` and `data.referralUrl` are present, the referrer has accepted
- * terms and has an active referral link in the upstream API.
- */
-export async function fetchReferralMe(): Promise<ReferralMePayload | null> {
-  const auth = getReferralApiAuth();
-  if (!auth) {
-    return null;
-  }
-
-  const url = `${auth.base.replace(/\/$/, "")}/api/v1/referral/me`;
+async function fetchReferralMeResponse(
+  base: string,
+  headers: Record<string, string>,
+): Promise<ReferralMeFetchResult> {
+  const url = `${base}/api/v1/referral/me`;
 
   let response: Response;
   try {
     response = await fetch(url, {
       method: "GET",
-      headers: {
-        accept: "*/*",
-        authorization: `Bearer ${auth.bearer}`,
-      },
+      headers,
       cache: "no-store",
     });
   } catch (error) {
     console.error("[fetchReferralMe] fetch threw", { url, error });
-    return null;
+    return { kind: "error" };
   }
 
   if (!response.ok) {
     let bodyPreview = "";
     try {
-      bodyPreview = (await response.text()).slice(0, 500);
+      bodyPreview = await response.text();
     } catch {
       /* ignore */
     }
+
+    if (isPendingEnrollmentNotFound(response.status, bodyPreview)) {
+      return { kind: "pending" };
+    }
+
     console.error("[fetchReferralMe] non-OK", {
       url,
       status: response.status,
-      bodyPreview,
+      bodyPreview: bodyPreview.slice(0, 500),
     });
-    return null;
+    return { kind: "error" };
   }
 
-  let json: unknown;
   try {
-    json = await response.json();
-  } catch {
-    return null;
-  }
-
-  if (!json || typeof json !== "object") {
-    return null;
-  }
-
-  const data = (json as { data?: unknown }).data;
-  if (!data || typeof data !== "object") {
-    return null;
-  }
-
-  const row = data as Record<string, unknown>;
-  const programId = typeof row.programId === "string" ? row.programId.trim() : "";
-  const referralUrl =
-    typeof row.referralUrl === "string" ? row.referralUrl.trim() : "";
-
-  if (!programId || !referralUrl) {
-    return null;
-  }
-
-  let code = typeof row.code === "string" ? row.code.trim() : "";
-  if (!code) {
-    try {
-      code = new URL(referralUrl).searchParams.get("ref")?.trim() ?? "";
-    } catch {
-      /* ignore */
+    const parsed = parseReferralMeJson(await response.json());
+    if (parsed) {
+      return { kind: "ok", payload: parsed };
     }
+  } catch {
+    /* fall through */
   }
 
-  const termsVersion =
-    typeof row.termsVersion === "string" ? row.termsVersion.trim() : "v1";
-  const createdAt =
-    typeof row.createdAt === "string" ? row.createdAt.trim() : undefined;
+  return { kind: "error" };
+}
 
-  return {
-    programId,
-    termsVersion,
-    code,
-    referralUrl,
-    createdAt,
-  };
+/**
+ * Server-side: GET /api/v1/referral/program, then GET /api/v1/referral/me.
+ * The live `/referal` page uses `loadReferralEnrollmentClient` instead (browser DevTools).
+ */
+export async function fetchReferralMe(): Promise<ReferralMePayload | null> {
+  const base = getAuthApiBase();
+  const headers = await referralApiHeaders();
+  if (!base || !headers) {
+    return null;
+  }
+
+  const program = await fetchReferralProgram();
+  if (!program) {
+    return null;
+  }
+
+  const me = await fetchReferralMeResponse(base, headers);
+  return composeReferralEnrollment(program, me);
 }

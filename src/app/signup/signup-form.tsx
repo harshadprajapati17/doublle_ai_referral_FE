@@ -3,10 +3,14 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 
-import { formatCurrency } from "@/lib/referrals/format";
-import { MOCK_PRICING_PLANS } from "@/lib/referrals/mock-plans";
+import {
+  extractAccessTokenFromLoginBody,
+  extractExpiresInSecondsFromLoginBody,
+  persistClientAuthSession,
+} from "@/lib/referrals/auth-token";
 
 const MIN_PASSWORD_LENGTH = 8;
+const POST_SIGNUP_DESTINATION = "/dashboard";
 
 function signupUrl(params: Record<string, string>) {
   const q = new URLSearchParams(params);
@@ -16,13 +20,11 @@ function signupUrl(params: Record<string, string>) {
 type SignupFormProps = {
   initialEmail: string;
   initialReferralCode: string;
-  initialPlanId: string;
 };
 
 export function SignupForm({
   initialEmail,
   initialReferralCode,
-  initialPlanId,
 }: SignupFormProps) {
   const [pending, setPending] = useState(false);
 
@@ -34,18 +36,16 @@ export function SignupForm({
     const workEmail = String(fd.get("workEmail") ?? "").trim().toLowerCase();
     const password = String(fd.get("password") ?? "").trim();
     const referralCode = String(fd.get("referralCode") ?? "").trim().toUpperCase();
-    const planId = String(fd.get("planId") ?? "").trim();
 
     const base: Record<string, string> = {};
     if (referralCode) base.ref = referralCode;
-    if (planId) base.plan = planId;
     if (workEmail) base.email = workEmail;
 
     if (!referralCode) {
       window.location.assign(signupUrl({ ...base, error: "missing-referral" }));
       return;
     }
-    if (!workEmail || !password || !planId) {
+    if (!workEmail || !password) {
       window.location.assign(signupUrl({ ...base, error: "missing-fields" }));
       return;
     }
@@ -63,6 +63,7 @@ export function SignupForm({
       return;
     }
 
+    // Temporary: signup signs the user in via demo auth (no separate register call yet).
     const url = `${apiBase}/api/v1/auth/demo`;
 
     setPending(true);
@@ -71,7 +72,7 @@ export function SignupForm({
         method: "POST",
         credentials: "include",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email: workEmail }),
+        body: JSON.stringify({ email: workEmail, password }),
       });
 
       if (!res.ok) {
@@ -81,13 +82,22 @@ export function SignupForm({
         return;
       }
 
-      window.location.assign(
-        signupUrl({
-          ...base,
-          status: "success",
-          email: workEmail,
-        }),
-      );
+      let json: unknown = null;
+      try {
+        json = await res.json();
+      } catch {
+        json = null;
+      }
+
+      const token = extractAccessTokenFromLoginBody(json);
+      if (!token) {
+        window.location.assign(signupUrl({ ...base, error: "auth-rejected" }));
+        return;
+      }
+
+      const maxAge = extractExpiresInSecondsFromLoginBody(json) ?? 60 * 60 * 24;
+      persistClientAuthSession(token, maxAge);
+      window.location.assign(POST_SIGNUP_DESTINATION);
     } catch {
       window.location.assign(signupUrl({ ...base, error: "auth-unavailable" }));
     } finally {
@@ -98,10 +108,7 @@ export function SignupForm({
   return (
     <form onSubmit={onSubmit} className="space-y-5">
       <div className="space-y-2">
-        <label
-          className="text-sm font-medium text-slate-700"
-          htmlFor="work-email"
-        >
+        <label className="text-sm font-medium text-slate-700" htmlFor="work-email">
           Email
         </label>
         <input
@@ -111,15 +118,13 @@ export function SignupForm({
           autoComplete="email"
           defaultValue={initialEmail}
           placeholder="name@company.com"
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 shadow-sm outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20"
+          disabled={pending}
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 shadow-sm outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20 disabled:opacity-60"
         />
       </div>
 
       <div className="space-y-2">
-        <label
-          className="text-sm font-medium text-slate-700"
-          htmlFor="password"
-        >
+        <label className="text-sm font-medium text-slate-700" htmlFor="password">
           Password
         </label>
         <input
@@ -129,7 +134,8 @@ export function SignupForm({
           autoComplete="new-password"
           minLength={8}
           placeholder="At least 8 characters"
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 shadow-sm outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20"
+          disabled={pending}
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 shadow-sm outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20 disabled:opacity-60"
         />
       </div>
 
@@ -148,59 +154,13 @@ export function SignupForm({
           spellCheck={false}
           defaultValue={initialReferralCode}
           placeholder="e.g. HARSH25"
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-mono text-sm font-medium uppercase tracking-wide text-slate-950 shadow-sm outline-none transition placeholder:normal-case placeholder:font-sans placeholder:font-normal placeholder:tracking-normal focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20"
+          disabled={pending}
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-mono text-sm font-medium uppercase tracking-wide text-slate-950 shadow-sm outline-none transition placeholder:normal-case placeholder:font-sans placeholder:font-normal placeholder:tracking-normal focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20 disabled:opacity-60"
         />
         <p className="text-sm text-slate-600">
-          Prefilled from your invite link when available. You can edit it;
-          what you submit overrides the referral cookie.
+          Prefilled from your invite link when available. You can edit it; what you
+          submit overrides the referral cookie.
         </p>
-      </div>
-
-      <div className="space-y-3">
-        <p className="text-sm font-medium text-slate-700">Choose your plan</p>
-        <div className="grid gap-3 md:grid-cols-4">
-          {MOCK_PRICING_PLANS.map((plan) => {
-            const isSelected = plan.id === initialPlanId;
-
-            return (
-              <label
-                key={plan.id}
-                className="group block h-full cursor-pointer rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-4 text-slate-900 transition hover:border-slate-300 hover:bg-white has-[:checked]:border-sky-500 has-[:checked]:bg-sky-50 has-[:checked]:ring-2 has-[:checked]:ring-sky-500/15"
-              >
-                <input
-                  type="radio"
-                  name="planId"
-                  value={plan.id}
-                  defaultChecked={isSelected}
-                  className="sr-only"
-                />
-                <div className="grid h-full min-h-[160px] grid-rows-[auto_auto_1fr_auto] gap-2.5">
-                  <p className="text-xl font-semibold leading-7 text-slate-950">
-                    {plan.name}
-                  </p>
-                  <span
-                    aria-hidden={!plan.badge}
-                    className={`inline-flex w-fit rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] ${
-                      plan.badge
-                        ? "bg-amber-100 text-amber-800 group-has-[:checked]:bg-sky-100 group-has-[:checked]:text-sky-800"
-                        : "invisible"
-                    }`}
-                  >
-                    {plan.badge ?? "Most Popular"}
-                  </span>
-                  <div>
-                    <p className="text-xs leading-5 text-slate-600 group-has-[:checked]:text-sky-700">
-                      {plan.description}
-                    </p>
-                  </div>
-                  <p className="text-base font-semibold leading-6 text-slate-950">
-                    {formatCurrency(plan.labelMonthlyRevenue)}/mo
-                  </p>
-                </div>
-              </label>
-            );
-          })}
-        </div>
       </div>
 
       <button
@@ -210,6 +170,16 @@ export function SignupForm({
       >
         {pending ? "Creating account…" : "Create account"}
       </button>
+
+      <p className="text-center text-sm text-slate-600">
+        Already have an account?{" "}
+        <a
+          href="/login?returnTo=/dashboard"
+          className="font-semibold text-sky-700 underline-offset-2 hover:underline"
+        >
+          Sign in
+        </a>
+      </p>
     </form>
   );
 }

@@ -4,6 +4,14 @@ export type ReferralTermsAcceptFormAction = (
 
 export type CommissionState = "pending" | "earned" | "paid" | "clawedBack";
 
+/** `error` query param on `/login` after failed demo-login */
+export type LoginQueryError =
+  | "invalid-credentials"
+  | "missing-credentials"
+  | "server-unavailable"
+  | "session-expired"
+  | "auth-misconfigured";
+
 /** `termsError` query param after accept-referral-terms server action redirect */
 export type ReferralTermsAcceptQueryError =
   | "server-unavailable"
@@ -109,47 +117,16 @@ export interface ReferrerDashboardData extends ReferrerDashboardBaseData {
   termsAcceptance: TermsAcceptanceData | null;
 }
 
-export interface ReferrerDashboardRecord extends ReferrerDashboardBaseData {
-  id: string;
-  userId: string;
-}
-
-export interface MockUserRecord {
-  id: string;
-  name: string;
-  email: string;
-  password: string;
-  role: "referrer";
-}
-
 export interface SessionUser {
   id: string;
   name: string;
   email: string;
 }
 
-export interface MockPricingPlan {
+export interface SignupPlan {
   id: string;
   name: string;
   description: string;
-  monthlyRevenue: number;
   labelMonthlyRevenue: number;
-  savingsLabel: string;
   badge?: string;
-}
-
-export interface MockSignupSubmissionRecord {
-  id: string;
-  referrerUserId: string;
-  workEmail: string;
-  companyName: string;
-  referralCode: string;
-  planId: string;
-  planName: string;
-  monthlyRevenue: number;
-  labelMonthlyRevenue?: number;
-  commissionAmount: number;
-  source: string;
-  status: "paid";
-  createdAt: string;
 }

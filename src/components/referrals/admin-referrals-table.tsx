@@ -12,8 +12,8 @@ function EmptyTableState() {
       <div>
         <h3 className="text-lg font-semibold text-slate-900">No referral records yet</h3>
         <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">
-          This admin list reads from the local mock database. Submit a referral
-          signup or seed dashboard referee records to populate it.
+          Wire this table to your admin referral API to list referees and payouts
+          across referrers.
         </p>
       </div>
     </div>

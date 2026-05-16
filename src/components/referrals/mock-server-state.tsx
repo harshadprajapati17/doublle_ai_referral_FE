@@ -22,14 +22,14 @@ export function MockServerState({
             <p className="font-semibold text-slate-950">What you can try</p>
             <p className="mt-2">
               Refresh the page. If the problem continues, sign out and sign in again
-              with the seeded demo accounts shown on the login screen.
+              with your account on the sign-in page.
             </p>
           </div>
           <a
-            href="/referal"
+            href="/login?returnTo=/referal"
             className="mt-8 inline-flex items-center justify-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
           >
-            Retry
+            Back to sign in
           </a>
         </section>
       </div>

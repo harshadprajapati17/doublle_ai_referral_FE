@@ -2,7 +2,10 @@
 
 import { redirect } from "next/navigation";
 
-import { getReferralApiAuth } from "@/lib/referrals/fetch-referral-me";
+import {
+  getAuthApiBase,
+  referralApiHeaders,
+} from "@/lib/referrals/auth-api";
 
 function safeReturnTo(value: FormDataEntryValue | null) {
   const raw = typeof value === "string" ? value : "";
@@ -10,27 +13,32 @@ function safeReturnTo(value: FormDataEntryValue | null) {
 }
 
 /**
- * POST `{AUTH_API_BASE_URL}/api/v1/referral/terms/accept` with Bearer from env.
+ * POST `{AUTH_API_BASE_URL}/api/v1/referral/terms/accept` with the login session cookie.
  * After success, redirect to `/referal`; the next load uses GET /referral/me to
  * detect acceptance. Logs to the server terminal on failure.
  */
 export async function acceptReferralTermsAction(formData: FormData) {
   const returnTo = safeReturnTo(formData.get("returnTo"));
-  const auth = getReferralApiAuth();
+  const base = getAuthApiBase();
+  const headers = await referralApiHeaders();
 
-  if (!auth) {
+  if (!base) {
     redirect(`${returnTo}?termsError=terms-misconfigured`);
   }
 
-  const url = `${auth.base.replace(/\/$/, "")}/api/v1/referral/terms/accept`;
+  if (!headers) {
+    redirect(`${returnTo}?termsError=terms-rejected`);
+  }
+
+  const url = `${base}/api/v1/referral/terms/accept`;
 
   let response: Response;
   try {
     response = await fetch(url, {
       method: "POST",
       headers: {
+        ...headers,
         "content-type": "application/json",
-        authorization: `Bearer ${auth.bearer}`,
       },
       body: JSON.stringify({}),
       cache: "no-store",
