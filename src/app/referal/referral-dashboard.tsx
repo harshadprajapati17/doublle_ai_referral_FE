@@ -5,19 +5,28 @@ import { useSearchParams } from "next/navigation";
 
 import { DashboardShell } from "@/components/referrals/dashboard-shell";
 import { MockServerState } from "@/components/referrals/mock-server-state";
-import { buildReferrerDashboardData } from "@/lib/referrals/build-referrer-dashboard";
-import { getClientAuthBearer } from "@/lib/referrals/auth-token";
+import { getClientSessionUser } from "@/lib/referrals/auth-token";
+import { buildReferrerDashboardAfterTermsAccept } from "@/lib/referrals/build-referrer-dashboard";
 import {
   acceptReferralTermsClient,
-  fetchAuthMeClient,
-  getPublicAuthApiBase,
-  loadReferralEnrollmentClient,
+  fetchSessionUserClient,
+  loadReferralDashboardClient,
 } from "@/lib/referrals/referral-api-client";
 import type {
   ReferralTermsAcceptQueryError,
   ReferrerDashboardData,
   SessionUser,
 } from "@/lib/referrals/types";
+
+type LoadIssue =
+  | "misconfigured"
+  | "no_session"
+  | "api_unreachable"
+  | "unauthorized";
+
+type ReferralDashboardProps = {
+  apiConfigured: boolean;
+};
 
 function parseTermsError(param: string | null): ReferralTermsAcceptQueryError | undefined {
   if (
@@ -31,70 +40,92 @@ function parseTermsError(param: string | null): ReferralTermsAcceptQueryError | 
   return undefined;
 }
 
-export function ReferralDashboard() {
+function issueCopy(issue: LoadIssue): { title: string; description: string } {
+  switch (issue) {
+    case "misconfigured":
+      return {
+        title: "Referral API not configured",
+        description:
+          "Set NEXT_PUBLIC_AUTH_API_BASE_URL to your auth API origin, then restart the dev server.",
+      };
+    case "no_session":
+      return {
+        title: "Sign in required",
+        description: "Your session cookie is missing. Sign in again to open the referral dashboard.",
+      };
+    case "unauthorized":
+      return {
+        title: "Session expired",
+        description:
+          "The auth API rejected your token (HTTP 401). Sign out, sign in again, then return here.",
+      };
+    case "api_unreachable":
+    default:
+      return {
+        title: "Referral dashboard unavailable",
+        description:
+          "We could not load /api/v1/referral/program or /api/v1/referral/me/dashboard. Ensure the auth API is running at your configured base URL and check DevTools → Network for failures (CORS, 404, 500).",
+      };
+  }
+}
+
+export function ReferralDashboard({ apiConfigured }: ReferralDashboardProps) {
   const searchParams = useSearchParams();
   const urlTermsError = parseTermsError(searchParams.get("termsError"));
   const [data, setData] = useState<ReferrerDashboardData | null>(null);
   const [user, setUser] = useState<SessionUser | null>(null);
-  const [loadError, setLoadError] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loadIssue, setLoadIssue] = useState<LoadIssue | null>(() =>
+    apiConfigured ? null : "misconfigured",
+  );
+  const [loading, setLoading] = useState(apiConfigured);
   const [termsError, setTermsError] = useState<ReferralTermsAcceptQueryError | undefined>(
     urlTermsError,
   );
   const [acceptPending, setAcceptPending] = useState(false);
 
-  const reloadDashboard = useCallback(async () => {
-    const enrollment = await loadReferralEnrollmentClient();
-    if (!enrollment) {
-      setData(null);
+  const reloadDashboard = useCallback(
+    async (options?: { keepExistingOnFailure?: boolean }): Promise<boolean> => {
+      const result = await loadReferralDashboardClient();
+      if (result.data) {
+        setData(result.data);
+        setLoadIssue(null);
+        return true;
+      }
+      if (result.issue) {
+        setLoadIssue(result.issue);
+      }
+      if (!options?.keepExistingOnFailure) {
+        setData(null);
+      }
       return false;
-    }
-    const appBaseUrl =
-      typeof window !== "undefined" ? window.location.origin : undefined;
-    setData(buildReferrerDashboardData(enrollment, appBaseUrl));
-    return true;
-  }, []);
+    },
+    [],
+  );
 
   useEffect(() => {
+    if (!apiConfigured) {
+      return;
+    }
+
     let cancelled = false;
 
     async function bootstrap() {
-      if (!getPublicAuthApiBase()) {
-        setLoadError(true);
-        setLoading(false);
-        return;
-      }
-
-      if (!getClientAuthBearer()) {
-        window.location.replace("/login?returnTo=/referal");
-        return;
-      }
-
-      setLoading(true);
-      setLoadError(false);
-
-      const [authUser, ok] = await Promise.all([
-        fetchAuthMeClient(),
-        reloadDashboard(),
-      ]);
-
-      if (cancelled) {
-        return;
-      }
-
-      setUser(
-        authUser ?? {
+      const sessionUser =
+        (await fetchSessionUserClient()) ??
+        getClientSessionUser() ?? {
           id: "referrer",
           name: "Referrer",
           email: "",
-        },
-      );
+        };
 
-      if (!ok) {
-        setLoadError(true);
+      if (!cancelled) {
+        setUser(sessionUser);
       }
 
-      setLoading(false);
+      await reloadDashboard();
+      if (!cancelled) {
+        setLoading(false);
+      }
     }
 
     void bootstrap();
@@ -102,23 +133,36 @@ export function ReferralDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [reloadDashboard]);
+  }, [apiConfigured, reloadDashboard]);
 
   const onAcceptTerms = useCallback(async () => {
     setTermsError(undefined);
     setAcceptPending(true);
     try {
-      const { ok, status } = await acceptReferralTermsClient();
-      if (!ok) {
+      const result = await acceptReferralTermsClient();
+      if (!result.ok) {
         setTermsError(
-          status >= 400 && status < 500 ? "terms-rejected" : "terms-unavailable",
+          result.status >= 400 && result.status < 500
+            ? "terms-rejected"
+            : "terms-unavailable",
         );
         return;
       }
-      const refreshed = await reloadDashboard();
-      if (!refreshed) {
-        setTermsError("terms-unavailable");
-      }
+
+      const appBaseUrl =
+        typeof window !== "undefined" ? window.location.origin : undefined;
+
+      setData((current) =>
+        current
+          ? buildReferrerDashboardAfterTermsAccept(
+              current,
+              result.accept,
+              appBaseUrl,
+            )
+          : current,
+      );
+
+      void reloadDashboard({ keepExistingOnFailure: true });
     } catch {
       setTermsError("terms-unavailable");
     } finally {
@@ -134,11 +178,17 @@ export function ReferralDashboard() {
     );
   }
 
-  if (loadError || !data || !user) {
+  if (loadIssue || !data || !user) {
+    const copy = issueCopy(loadIssue ?? "api_unreachable");
     return (
       <MockServerState
-        title="Referral dashboard unavailable"
-        description="We could not reach the referral API. Check NEXT_PUBLIC_AUTH_API_BASE_URL, ensure the auth service is running, and sign in again. Open DevTools → Network to inspect calls to /api/v1/referral/program and /api/v1/referral/me."
+        title={copy.title}
+        description={copy.description}
+        signInHref={
+          loadIssue === "no_session" || loadIssue === "unauthorized"
+            ? "/login?returnTo=/referal"
+            : undefined
+        }
       />
     );
   }

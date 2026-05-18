@@ -1,7 +1,6 @@
 import "server-only";
 
-import { buildReferrerDashboardData } from "@/lib/referrals/build-referrer-dashboard";
-import { fetchReferralMe } from "@/lib/referrals/fetch-referral-me";
+import { fetchReferrerDashboard } from "@/lib/referrals/fetch-referral-dashboard";
 import {
   hasReferralApiSession,
   isReferralApiConfigured,
@@ -22,10 +21,5 @@ export async function getReferrerDashboardData(
     return null;
   }
 
-  const me = await fetchReferralMe();
-  if (!me) {
-    return null;
-  }
-
-  return buildReferrerDashboardData(me, appBaseUrl);
+  return fetchReferrerDashboard(appBaseUrl);
 }

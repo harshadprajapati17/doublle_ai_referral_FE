@@ -3,28 +3,48 @@
 import { useEffect, useState } from "react";
 
 import { WorkspaceAppShell } from "@/components/workspace/workspace-app-shell";
-import { clearClientAuthSession, getClientAuthBearer } from "@/lib/referrals/auth-token";
-import type { BillingSubscription } from "@/lib/referrals/billing-payload";
+import { getClientSessionUser } from "@/lib/referrals/auth-token";
 import {
-  fetchAuthMeClient,
+  isAppliedRefereeBenefit,
+  type BillingRefereeBenefit,
+  type BillingSubscription,
+} from "@/lib/referrals/billing-payload";
+import { SubscribePlansPanel } from "@/components/billing/subscribe-plans-panel";
+import {
   fetchBillingSubscriptionsMeClient,
-  getPublicAuthApiBase,
+  fetchSessionUserClient,
+  isAuthApiConfigured,
 } from "@/lib/referrals/referral-api-client";
 import type { SessionUser } from "@/lib/referrals/types";
 
-function formatMoney(amountCents: number | null, currency: string | null): string {
-  if (amountCents === null) {
+const FALLBACK_USER: SessionUser = {
+  id: "user",
+  name: "there",
+  email: "",
+};
+
+function formatAmount(amount: number | null): string {
+  if (amount === null) {
     return "—";
   }
-  const code = (currency ?? "USD").toUpperCase();
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: "currency",
-      currency: code,
-    }).format(amountCents / 100);
-  } catch {
-    return `${(amountCents / 100).toFixed(2)} ${code}`;
+  return new Intl.NumberFormat(undefined, {
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+function formatCurrencyCode(currency: string | null): string {
+  return currency?.trim().toUpperCase() || "—";
+}
+
+function formatFrequency(frequency: string | null): string {
+  if (!frequency) {
+    return "—";
   }
+  return frequency
+    .trim()
+    .toLowerCase()
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function formatDate(iso: string | null): string {
@@ -54,7 +74,35 @@ function statusTone(status: string): string {
   return "border-sky-200 bg-sky-50 text-sky-800";
 }
 
-function SubscriptionCard({ subscription }: { subscription: BillingSubscription }) {
+function RefereeBenefitBanner({ benefit }: { benefit: BillingRefereeBenefit }) {
+  return (
+    <div className="rounded-2xl border border-sky-200 bg-sky-50/80 px-4 py-4 sm:px-5">
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-800">
+        Referral benefit applied
+      </p>
+      <p className="mt-2 text-base font-semibold text-slate-950">
+        {benefit.benefitLabel ?? "Referral credit"}
+      </p>
+      <p className="mt-1 text-sm text-slate-600">
+        Code <span className="font-mono font-medium text-slate-800">{benefit.code}</span>
+        {benefit.appliedAt ? (
+          <>
+            {" "}
+            · applied {formatDate(benefit.appliedAt)}
+          </>
+        ) : null}
+      </p>
+    </div>
+  );
+}
+
+function SubscriptionCard({
+  subscription,
+  refereeBenefit,
+}: {
+  subscription: BillingSubscription;
+  refereeBenefit: BillingRefereeBenefit | null;
+}) {
   return (
     <article className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -74,21 +122,35 @@ function SubscriptionCard({ subscription }: { subscription: BillingSubscription 
         </span>
       </div>
 
+      {isAppliedRefereeBenefit(refereeBenefit) ? (
+        <div className="mt-6">
+          <RefereeBenefitBanner benefit={refereeBenefit} />
+        </div>
+      ) : null}
+
       <dl className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div className="rounded-2xl border border-slate-100 bg-slate-50/80 px-4 py-3">
           <dt className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
             Amount
           </dt>
           <dd className="mt-2 text-lg font-semibold text-slate-950">
-            {formatMoney(subscription.amountCents, subscription.currency)}
+            {formatAmount(subscription.amount)}
           </dd>
         </div>
         <div className="rounded-2xl border border-slate-100 bg-slate-50/80 px-4 py-3">
           <dt className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
-            Billing interval
+            Currency
           </dt>
-          <dd className="mt-2 text-lg font-semibold capitalize text-slate-950">
-            {subscription.billingInterval ?? "—"}
+          <dd className="mt-2 text-lg font-semibold text-slate-950">
+            {formatCurrencyCode(subscription.currency)}
+          </dd>
+        </div>
+        <div className="rounded-2xl border border-slate-100 bg-slate-50/80 px-4 py-3">
+          <dt className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+            Frequency
+          </dt>
+          <dd className="mt-2 text-lg font-semibold text-slate-950">
+            {formatFrequency(subscription.frequency)}
           </dd>
         </div>
         <div className="rounded-2xl border border-slate-100 bg-slate-50/80 px-4 py-3">
@@ -121,33 +183,26 @@ function SubscriptionCard({ subscription }: { subscription: BillingSubscription 
 }
 
 export function WorkspaceDashboard() {
-  const [user, setUser] = useState<SessionUser | null>(null);
-  const [subscriptions, setSubscriptions] = useState<BillingSubscription[]>([]);
+  const [user, setUser] = useState<SessionUser>(FALLBACK_USER);
+  const [activeSubscriptions, setActiveSubscriptions] = useState<BillingSubscription[]>([]);
+  const [refereeBenefit, setRefereeBenefit] = useState<BillingRefereeBenefit | null>(null);
   const [billingStatus, setBillingStatus] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const refreshBilling = async () => {
+    const billing = await fetchBillingSubscriptionsMeClient();
+    setActiveSubscriptions(billing.activeSubscriptions);
+    setRefereeBenefit(billing.refereeBenefit);
+    setBillingStatus(billing.status);
+  };
 
   useEffect(() => {
     let cancelled = false;
 
     async function bootstrap() {
-      if (!getPublicAuthApiBase()) {
-        window.location.replace("/login?returnTo=/dashboard&error=auth-misconfigured");
-        return;
-      }
-
-      if (!getClientAuthBearer()) {
-        window.location.replace("/login?returnTo=/dashboard");
-        return;
-      }
-
-      const authUser = await fetchAuthMeClient();
-      if (cancelled) {
-        return;
-      }
-
-      if (!authUser) {
-        clearClientAuthSession();
-        window.location.replace("/login?returnTo=/dashboard&error=session-expired");
+      if (!isAuthApiConfigured()) {
+        setBillingStatus(0);
+        setLoading(false);
         return;
       }
 
@@ -156,8 +211,11 @@ export function WorkspaceDashboard() {
         return;
       }
 
-      setUser(authUser);
-      setSubscriptions(billing.subscriptions);
+      const sessionUser =
+        (await fetchSessionUserClient()) ?? getClientSessionUser() ?? FALLBACK_USER;
+      setUser(sessionUser);
+      setActiveSubscriptions(billing.activeSubscriptions);
+      setRefereeBenefit(billing.refereeBenefit);
       setBillingStatus(billing.status);
       setLoading(false);
     }
@@ -169,10 +227,10 @@ export function WorkspaceDashboard() {
     };
   }, []);
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,_#f4f7fb_0%,_#eef3f8_100%)]">
-        <p className="text-sm font-medium text-slate-600">Loading workspace…</p>
+        <p className="text-sm font-medium text-slate-600">Loading billing…</p>
       </main>
     );
   }
@@ -182,38 +240,37 @@ export function WorkspaceDashboard() {
     billingStatus !== null && billingStatus > 0 && billingStatus !== 200;
 
   return (
-    <WorkspaceAppShell activeNav="dashboard" user={user}>
+    <WorkspaceAppShell activeNav="billing" user={user}>
       <header className="mb-8">
         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sky-700">
-          Dashboard
+          Billing
         </p>
         <h2 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">
           Welcome, {displayName}
         </h2>
         <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
-          Your workspace overview and subscription details from billing.
+          Manage your subscription and billing details.
         </p>
       </header>
 
       <section className="space-y-6">
-        <h3 className="text-lg font-semibold text-slate-950">Subscription</h3>
+        <h3 className="text-lg font-semibold text-slate-950">Current subscription</h3>
 
         {billingUnavailable ? (
           <div className="rounded-[28px] border border-amber-200 bg-amber-50 px-6 py-5 text-sm text-amber-900">
             We could not load your subscription (HTTP {billingStatus}). Confirm the
             billing API is running and you are signed in.
           </div>
-        ) : subscriptions.length === 0 ? (
-          <div className="rounded-[28px] border border-dashed border-slate-200 bg-white px-6 py-10 text-center shadow-sm">
-            <p className="text-base font-semibold text-slate-950">No active subscription</p>
-            <p className="mt-2 text-sm text-slate-600">
-              Your account is ready. Add a plan when billing is connected to this workspace.
-            </p>
-          </div>
+        ) : activeSubscriptions.length === 0 ? (
+          <SubscribePlansPanel onSubscriptionActivated={refreshBilling} />
         ) : (
           <div className="space-y-4">
-            {subscriptions.map((subscription) => (
-              <SubscriptionCard key={subscription.id} subscription={subscription} />
+            {activeSubscriptions.map((subscription) => (
+              <SubscriptionCard
+                key={subscription.id}
+                subscription={subscription}
+                refereeBenefit={refereeBenefit}
+              />
             ))}
           </div>
         )}

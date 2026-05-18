@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
-import { LoginRedirectIfAuthed } from "@/app/login/login-redirect-if-authed";
 import { LoginShell } from "@/components/referrals/login-shell";
+import { REFERRAL_HOME } from "@/lib/auth/cookie";
 import type { LoginQueryError } from "@/lib/referrals/types";
 
 export const metadata: Metadata = {
@@ -33,7 +33,7 @@ function safeReturnTo(value: string | undefined): string {
   if (value?.startsWith("/") && !value.startsWith("//")) {
     return value;
   }
-  return "/referal";
+  return REFERRAL_HOME;
 }
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
@@ -45,10 +45,5 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   const returnTo = safeReturnTo(returnToParam);
 
-  return (
-    <>
-      <LoginRedirectIfAuthed returnTo={returnTo} />
-      <LoginShell error={parseLoginError(errorParam)} returnTo={returnTo} />
-    </>
-  );
+  return <LoginShell error={parseLoginError(errorParam)} returnTo={returnTo} />;
 }

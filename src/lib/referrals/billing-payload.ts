@@ -1,14 +1,53 @@
+import {
+  formatRefereeBenefitLabel,
+  parseRefereeBenefit,
+  type RefereeBenefit,
+} from "@/lib/referrals/validate-referral-code";
+
 export type BillingSubscription = {
   id: string;
   planName: string;
   status: string;
-  billingInterval: string | null;
+  frequency: string | null;
   currentPeriodStart: string | null;
   currentPeriodEnd: string | null;
-  amountCents: number | null;
+  amount: number | null;
   currency: string | null;
   cancelAtPeriodEnd: boolean;
 };
+
+export type BillingRefereeBenefit = {
+  code: string;
+  status: string;
+  benefit: RefereeBenefit | null;
+  benefitLabel: string | null;
+  appliedAt: string | null;
+};
+
+export type BillingSubscriptionsMePayload = {
+  subscriptions: BillingSubscription[];
+  refereeBenefit: BillingRefereeBenefit | null;
+};
+
+const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing"]);
+
+export function isActiveSubscriptionStatus(status: string): boolean {
+  return ACTIVE_SUBSCRIPTION_STATUSES.has(status.trim().toLowerCase());
+}
+
+export function filterActiveSubscriptions(
+  subscriptions: BillingSubscription[],
+): BillingSubscription[] {
+  return subscriptions.filter((subscription) =>
+    isActiveSubscriptionStatus(subscription.status),
+  );
+}
+
+export function isAppliedRefereeBenefit(
+  benefit: BillingRefereeBenefit | null,
+): benefit is BillingRefereeBenefit {
+  return benefit !== null && benefit.status.trim().toUpperCase() === "APPLIED";
+}
 
 function pickString(record: Record<string, unknown>, ...keys: string[]): string {
   for (const key of keys) {
@@ -51,6 +90,26 @@ function pickIsoDate(record: Record<string, unknown>, ...keys: string[]): string
   return raw || null;
 }
 
+function resolveAmount(row: Record<string, unknown>): number | null {
+  const amount = pickNumber(row, "amount");
+  if (amount !== null) {
+    return amount;
+  }
+
+  const amountCents = pickNumber(
+    row,
+    "amountCents",
+    "amount_cents",
+    "unitAmountCents",
+    "unit_amount_cents",
+  );
+  if (amountCents !== null) {
+    return amountCents / 100;
+  }
+
+  return null;
+}
+
 function subscriptionFromRecord(row: Record<string, unknown>): BillingSubscription | null {
   const id = pickString(row, "id", "subscriptionId", "subscription_id");
   if (!id) {
@@ -68,18 +127,20 @@ function subscriptionFromRecord(row: Record<string, unknown>): BillingSubscripti
 
   const status = pickString(row, "status", "subscriptionStatus", "subscription_status") || "unknown";
 
-  const billingInterval =
-    pickString(row, "billingInterval", "billing_interval", "interval") ||
-    (plan ? pickString(plan, "interval", "billingInterval", "billing_interval") : "") ||
+  const frequency =
+    pickString(row, "frequency", "billingInterval", "billing_interval", "interval") ||
+    (plan ? pickString(plan, "frequency", "interval", "billingInterval", "billing_interval") : "") ||
     null;
 
   return {
     id,
     planName: planName || "Subscription",
     status,
-    billingInterval,
+    frequency,
     currentPeriodStart: pickIsoDate(
       row,
+      "currentStart",
+      "current_start",
       "currentPeriodStart",
       "current_period_start",
       "periodStart",
@@ -87,21 +148,19 @@ function subscriptionFromRecord(row: Record<string, unknown>): BillingSubscripti
     ),
     currentPeriodEnd: pickIsoDate(
       row,
+      "currentEnd",
+      "current_end",
       "currentPeriodEnd",
       "current_period_end",
       "periodEnd",
       "period_end",
     ),
-    amountCents: pickNumber(
-      row,
-      "amountCents",
-      "amount_cents",
-      "unitAmountCents",
-      "unit_amount_cents",
-    ),
+    amount: resolveAmount(row),
     currency: pickString(row, "currency") || null,
     cancelAtPeriodEnd: pickBoolean(
       row,
+      "cancelAtCycleEnd",
+      "cancel_at_cycle_end",
       "cancelAtPeriodEnd",
       "cancel_at_period_end",
       "cancelAtEnd",
@@ -109,9 +168,30 @@ function subscriptionFromRecord(row: Record<string, unknown>): BillingSubscripti
   };
 }
 
-function collectSubscriptionRecords(json: unknown): Record<string, unknown>[] {
+function parseRefereeBenefitFromMe(row: Record<string, unknown>): BillingRefereeBenefit | null {
+  const status = pickString(row, "status");
+  const code = pickString(row, "code");
+  if (!status || !code) {
+    return null;
+  }
+
+  const nestedBenefit =
+    row.benefit && typeof row.benefit === "object"
+      ? parseRefereeBenefit(row.benefit)
+      : parseRefereeBenefit(row);
+
+  return {
+    code,
+    status,
+    benefit: nestedBenefit,
+    benefitLabel: formatRefereeBenefitLabel(nestedBenefit),
+    appliedAt: pickIsoDate(row, "appliedAt", "applied_at"),
+  };
+}
+
+function extractDataEnvelope(json: unknown): Record<string, unknown> | null {
   if (!json || typeof json !== "object") {
-    return [];
+    return null;
   }
 
   const root = json as Record<string, unknown>;
@@ -120,6 +200,10 @@ function collectSubscriptionRecords(json: unknown): Record<string, unknown>[] {
       ? (root.data as Record<string, unknown>)
       : root;
 
+  return data;
+}
+
+function collectSubscriptionRecords(data: Record<string, unknown>): Record<string, unknown>[] {
   const candidates: unknown[] = [];
 
   if (Array.isArray(data)) {
@@ -127,6 +211,12 @@ function collectSubscriptionRecords(json: unknown): Record<string, unknown>[] {
   } else {
     if (data.subscription && typeof data.subscription === "object") {
       candidates.push(data.subscription);
+    }
+    if (data.activeSubscription && typeof data.activeSubscription === "object") {
+      candidates.push(data.activeSubscription);
+    }
+    if (data.currentSubscription && typeof data.currentSubscription === "object") {
+      candidates.push(data.currentSubscription);
     }
     if (data.subscriptions) {
       candidates.push(data.subscriptions);
@@ -156,8 +246,13 @@ function collectSubscriptionRecords(json: unknown): Record<string, unknown>[] {
   return rows;
 }
 
-export function parseBillingSubscriptionsMeJson(json: unknown): BillingSubscription[] {
-  const rows = collectSubscriptionRecords(json);
+export function parseBillingSubscriptionsMeJson(json: unknown): BillingSubscriptionsMePayload {
+  const data = extractDataEnvelope(json);
+  if (!data) {
+    return { subscriptions: [], refereeBenefit: null };
+  }
+
+  const rows = collectSubscriptionRecords(data);
   const subscriptions: BillingSubscription[] = [];
 
   for (const row of rows) {
@@ -167,5 +262,11 @@ export function parseBillingSubscriptionsMeJson(json: unknown): BillingSubscript
     }
   }
 
-  return subscriptions;
+  const refereeRow = data.refereeBenefit ?? data.referee_benefit;
+  const refereeBenefit =
+    refereeRow && typeof refereeRow === "object"
+      ? parseRefereeBenefitFromMe(refereeRow as Record<string, unknown>)
+      : null;
+
+  return { subscriptions, refereeBenefit };
 }

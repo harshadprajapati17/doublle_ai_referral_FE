@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { ReferralDashboard } from "@/app/referal/referral-dashboard";
+import { isAuthApiConfigured } from "@/lib/auth/api-base";
 
 export const metadata: Metadata = {
   title: "Referrer Dashboard",
@@ -18,7 +19,7 @@ export default function ReferralPage() {
         </main>
       }
     >
-      <ReferralDashboard />
+      <ReferralDashboard apiConfigured={isAuthApiConfigured()} />
     </Suspense>
   );
 }

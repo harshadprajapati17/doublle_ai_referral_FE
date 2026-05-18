@@ -1,25 +1,11 @@
 import { redirect } from "next/navigation";
 
-interface HomeProps {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}
+import { REFERRAL_HOME } from "@/lib/auth/cookie";
+import { hasReferralApiSession } from "@/lib/referrals/auth-api";
 
-export default async function Home({ searchParams }: HomeProps) {
-  const params = await searchParams;
-  const query = new URLSearchParams();
-
-  Object.entries(params).forEach(([key, value]) => {
-    if (typeof value === "string") {
-      query.set(key, value);
-      return;
-    }
-
-    value?.forEach((item) => {
-      query.append(key, item);
-    });
-  });
-
-  const destination = query.size > 0 ? `/login?${query.toString()}` : "/login";
-
-  redirect(destination);
+export default async function Home() {
+  if (await hasReferralApiSession()) {
+    redirect(REFERRAL_HOME);
+  }
+  redirect("/login");
 }

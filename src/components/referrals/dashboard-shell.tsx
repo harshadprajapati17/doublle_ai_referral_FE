@@ -6,7 +6,6 @@ import { ProgramTermsModal } from "@/components/referrals/program-terms-modal";
 import { ProgramTermsPanel } from "@/components/referrals/program-terms-panel";
 import { RefereesTable } from "@/components/referrals/referees-table";
 import { StatsStrip } from "@/components/referrals/stats-strip";
-import { TransactionsPanel } from "@/components/referrals/transactions-panel";
 import type {
   ReferralTermsAcceptQueryError,
   ReferrerDashboardData,
@@ -31,11 +30,11 @@ function TermsGatePreview({
   return (
     <section
       id="overview"
-      className="relative flex min-h-[32rem] w-full flex-1 flex-col overflow-hidden rounded-[32px] border border-slate-200 bg-white/95 shadow-[0_20px_60px_rgba(15,23,42,0.08)]"
+      className="relative w-full rounded-2xl border border-slate-200 bg-white/95 shadow-[0_12px_32px_rgba(15,23,42,0.05)]"
     >
       <div
         aria-hidden="true"
-        className="grid min-h-full w-full gap-8 px-6 py-6 sm:px-8 sm:py-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)] lg:gap-10"
+        className="grid w-full gap-8 px-6 py-6 sm:px-8 sm:py-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)] lg:gap-10"
       >
         <div className="space-y-6 blur-[3px]">
           <div className="space-y-4">
@@ -80,7 +79,7 @@ function TermsGatePreview({
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-sky-100 bg-[linear-gradient(180deg,_#f8fbff_0%,_#eef6ff_100%)] p-5 shadow-[0_18px_50px_rgba(14,165,233,0.08)] sm:p-6">
+          <div className="rounded-2xl border border-sky-100 bg-[linear-gradient(180deg,_#f8fbff_0%,_#eef6ff_100%)] p-5 shadow-[0_12px_32px_rgba(14,165,233,0.06)] sm:p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">
               Stats card
             </p>
@@ -93,19 +92,20 @@ function TermsGatePreview({
                   key={stat.id}
                   className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm"
                 >
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-slate-500">
                     {stat.label}
                   </p>
-                  <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
+                  <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 tabular-nums">
                     {stat.value}
                   </p>
+                  <p className="mt-1.5 text-xs font-medium text-slate-500">{stat.change}</p>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        <div className="rounded-[28px] border border-slate-200 bg-slate-50/90 p-5 blur-[3px] sm:p-6">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/90 p-5 blur-[3px] sm:p-6">
           <div className="space-y-5">
             <div className="space-y-2">
               <p className="text-sm font-medium text-slate-600">Personal link</p>
@@ -170,8 +170,7 @@ export function DashboardShell({
   acceptTermsPending,
 }: DashboardShellProps) {
   const hasAcceptedTerms = Boolean(data.termsAcceptance);
-  const hasReferralActivity =
-    data.referees.length > 0 || data.transactions.length > 0;
+  const hasReferralActivity = data.referees.length > 0;
   const showTermsGate = !hasAcceptedTerms;
 
   return (
@@ -188,11 +187,7 @@ export function DashboardShell({
         </p>
       </header>
 
-      <div
-        className={
-          showTermsGate ? "flex min-h-[32rem] flex-1 flex-col" : "space-y-6"
-        }
-      >
+      <div className="space-y-6">
         {showTermsGate ? (
           <TermsGatePreview
                 data={data}
@@ -213,16 +208,8 @@ export function DashboardShell({
                   <StatsStrip stats={data.stats} />
                 </section>
 
-                <section className="space-y-6">
-                  <div id="referees" className="scroll-mt-6">
-                    <RefereesTable referees={data.referees} />
-                  </div>
-                  <div id="transactions" className="scroll-mt-6">
-                    <TransactionsPanel
-                      transactions={data.transactions}
-                      programTerms={data.programTerms}
-                    />
-                  </div>
+                <section id="referees" className="scroll-mt-6">
+                  <RefereesTable referees={data.referees} />
                 </section>
 
                 <ProgramTermsPanel terms={data.programTerms} />

@@ -1,11 +1,16 @@
 /** Shared auth token helpers (safe for client and server). */
 
+import {
+  parseAuthTokenCookieValue,
+  readAuthCookieName,
+} from "@/lib/auth/cookie";
+import type { SessionUser } from "@/lib/referrals/types";
+
+export { parseAuthTokenCookieValue };
+
+/** Cookie name for the app auth token (`doublle_access_token` by default). */
 export function getAuthTokenCookieName(): string {
-  return (
-    process.env.NEXT_PUBLIC_AUTH_TOKEN_COOKIE_NAME?.trim() ||
-    process.env.AUTH_TOKEN_COOKIE_NAME?.trim() ||
-    "doublle_access_token"
-  );
+  return readAuthCookieName();
 }
 
 export function extractExpiresInSecondsFromLoginBody(
@@ -62,6 +67,24 @@ export function extractAccessTokenFromLoginBody(json: unknown): string | null {
   return null;
 }
 
+/** Reads `{ error: { message } }` or top-level `message` from API error bodies. */
+export function extractApiErrorMessage(json: unknown): string | null {
+  if (!json || typeof json !== "object") {
+    return null;
+  }
+
+  const root = json as Record<string, unknown>;
+  const error =
+    root.error && typeof root.error === "object"
+      ? (root.error as Record<string, unknown>)
+      : null;
+  const message =
+    (typeof error?.message === "string" && error.message.trim()) ||
+    (typeof root.message === "string" && root.message.trim());
+
+  return message || null;
+}
+
 /** Mirror API token onto the Next app origin so server components can call referral APIs. */
 export function setAppAuthCookie(token: string, maxAgeSeconds = 60 * 60 * 12) {
   if (typeof document === "undefined") {
@@ -71,7 +94,7 @@ export function setAppAuthCookie(token: string, maxAgeSeconds = 60 * 60 * 12) {
   document.cookie = `${name}=${encodeURIComponent(token)}; path=/; max-age=${maxAgeSeconds}; samesite=lax`;
 }
 
-/** Client session: cookie + sessionStorage (used by referral dashboard in the browser). */
+/** Persist token in the app cookie (read by middleware and API clients). */
 export function persistClientAuthSession(
   token: string,
   maxAgeSeconds = 60 * 60 * 12,
@@ -81,22 +104,12 @@ export function persistClientAuthSession(
     return;
   }
   setAppAuthCookie(normalized, maxAgeSeconds);
-  try {
-    sessionStorage.setItem(getAuthTokenCookieName(), normalized);
-  } catch {
-    /* private browsing */
-  }
 }
 
 export function clearClientAuthSession() {
   if (typeof document !== "undefined") {
     const name = getAuthTokenCookieName();
     document.cookie = `${name}=; path=/; max-age=0; samesite=lax`;
-  }
-  try {
-    sessionStorage.removeItem(getAuthTokenCookieName());
-  } catch {
-    /* ignore */
   }
 }
 
@@ -128,21 +141,52 @@ function readBearerFromDocumentCookie(): string | null {
   return null;
 }
 
-/** Bearer for browser API calls — sessionStorage first, then document cookie. */
-export function getClientAuthBearer(): string | null {
-  if (typeof window === "undefined") {
+/** Best-effort user display fields from a JWT access token (no network call). */
+export function getSessionUserFromAccessToken(token: string): SessionUser | null {
+  const normalized = token.replace(/^Bearer\s+/i, "").trim();
+  const parts = normalized.split(".");
+  if (parts.length < 2) {
     return null;
   }
+
   try {
-    const fromStorage = sessionStorage
-      .getItem(getAuthTokenCookieName())
-      ?.replace(/^Bearer\s+/i, "")
-      .trim();
-    if (fromStorage) {
-      return fromStorage;
-    }
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
+    const payload = JSON.parse(atob(padded)) as Record<string, unknown>;
+
+    const email =
+      typeof payload.email === "string" ? payload.email.trim().toLowerCase() : "";
+    const id =
+      typeof payload.sub === "string"
+        ? payload.sub.trim()
+        : typeof payload.userId === "string"
+          ? payload.userId.trim()
+          : typeof payload.id === "string"
+            ? payload.id.trim()
+            : email || "user";
+
+    const name =
+      typeof payload.name === "string" && payload.name.trim()
+        ? payload.name.trim()
+        : email
+          ? (email.split("@")[0] ?? "there")
+          : "there";
+
+    return { id, name, email };
   } catch {
-    /* ignore */
+    return null;
   }
+}
+
+export function getClientSessionUser(): SessionUser | null {
+  const bearer = getClientAuthBearer();
+  if (!bearer) {
+    return null;
+  }
+  return getSessionUserFromAccessToken(bearer);
+}
+
+/** Bearer for browser API calls — reads `doublle_access_token` cookie only. */
+export function getClientAuthBearer(): string | null {
   return readBearerFromDocumentCookie();
 }

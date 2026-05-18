@@ -8,6 +8,11 @@ import {
   extractExpiresInSecondsFromLoginBody,
   persistClientAuthSession,
 } from "@/lib/referrals/auth-token";
+import {
+  AUTH_SIGNIN_REFERRAL_PATH,
+  buildSigninReferralRequestBody,
+} from "@/lib/referrals/referral-auth-client";
+import { getPublicAuthApiBase } from "@/lib/referrals/referral-api-client";
 import type { LoginQueryError } from "@/lib/referrals/types";
 
 type LoginFormProps = {
@@ -43,16 +48,13 @@ export function LoginForm({ returnTo, initialError }: LoginFormProps) {
       return;
     }
 
-    const apiBase = process.env.NEXT_PUBLIC_AUTH_API_BASE_URL?.trim().replace(
-      /\/$/,
-      "",
-    );
+    const apiBase = getPublicAuthApiBase();
     if (!apiBase) {
       setError("auth-misconfigured");
       return;
     }
 
-    const url = `${apiBase}/api/v1/auth/demo`;
+    const url = `${apiBase}${AUTH_SIGNIN_REFERRAL_PATH}`;
 
     setPending(true);
     try {
@@ -60,8 +62,15 @@ export function LoginForm({ returnTo, initialError }: LoginFormProps) {
         method: "POST",
         credentials: "include",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(buildSigninReferralRequestBody({ email, password })),
       });
+
+      let json: unknown = null;
+      try {
+        json = await res.json();
+      } catch {
+        json = null;
+      }
 
       if (!res.ok) {
         setError(
@@ -72,13 +81,6 @@ export function LoginForm({ returnTo, initialError }: LoginFormProps) {
         return;
       }
 
-      let json: unknown = null;
-      try {
-        json = await res.json();
-      } catch {
-        json = null;
-      }
-
       const token = extractAccessTokenFromLoginBody(json);
       if (!token) {
         setError("invalid-credentials");
@@ -87,6 +89,12 @@ export function LoginForm({ returnTo, initialError }: LoginFormProps) {
 
       const maxAge = extractExpiresInSecondsFromLoginBody(json) ?? 60 * 60 * 24;
       persistClientAuthSession(token, maxAge);
+      await fetch("/api/auth/session", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token, maxAge }),
+      });
       window.location.assign(returnTo);
     } catch {
       setError("server-unavailable");

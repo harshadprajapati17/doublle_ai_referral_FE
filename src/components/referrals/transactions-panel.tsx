@@ -11,7 +11,7 @@ interface TransactionsPanelProps {
 
 function EmptyTransactionsState() {
   return (
-    <div className="flex min-h-[186px] items-center justify-center rounded-[28px] border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center">
+    <div className="flex min-h-[186px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center">
       <div>
         <h3 className="text-lg font-semibold text-slate-900">No transactions yet</h3>
         <p className="mt-2 text-sm leading-6 text-slate-600">
@@ -28,7 +28,7 @@ export function TransactionsPanel({
   programTerms,
 }: TransactionsPanelProps) {
   return (
-    <aside className="flex h-full flex-col rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] sm:p-8">
+    <aside className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] sm:p-8">
       <div className="space-y-3">
         <h2 className="text-2xl font-semibold tracking-tight text-slate-950">
           Transactions
@@ -47,7 +47,7 @@ export function TransactionsPanel({
             {transactions.map((transaction) => (
               <article
                 key={transaction.id}
-                className="rounded-[24px] border border-slate-200 bg-slate-50 p-5"
+                className="rounded-2xl border border-slate-200 bg-slate-50 p-5"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-1">
@@ -69,7 +69,10 @@ export function TransactionsPanel({
                       transaction.amount >= 0 ? "text-slate-950" : "text-rose-700"
                     }`}
                   >
-                    {formatSignedCurrency(transaction.amount)}
+                    {formatSignedCurrency(
+                      transaction.amount,
+                      transaction.currency ?? "USD",
+                    )}
                   </p>
                 </div>
               </article>
@@ -78,7 +81,7 @@ export function TransactionsPanel({
         )}
       </div>
 
-      <div className="mt-6 rounded-[24px] border border-sky-100 bg-sky-50 px-5 py-5">
+      <div className="mt-6 rounded-2xl border border-sky-100 bg-sky-50 px-5 py-5">
         <p className="text-sm font-semibold text-slate-950">{programTerms.title}</p>
         <p className="mt-2 text-sm leading-6 text-slate-600">
           Need help with payout timing, refund reversals, or eligibility?

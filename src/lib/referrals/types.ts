@@ -4,7 +4,7 @@ export type ReferralTermsAcceptFormAction = (
 
 export type CommissionState = "pending" | "earned" | "paid" | "clawedBack";
 
-/** `error` query param on `/login` after failed demo-login */
+/** `error` query param on `/login` after failed sign-in */
 export type LoginQueryError =
   | "invalid-credentials"
   | "missing-credentials"
@@ -39,12 +39,15 @@ export interface HeroData {
   termsHref: string;
 }
 
+export type StatStatusTone = "positive" | "neutral" | "muted" | "unavailable";
+
 export interface StatData {
   id: StatId;
   label: string;
   value: string;
   change: string;
   helper: string;
+  statusTone: StatStatusTone;
 }
 
 export interface RefereeData {
@@ -59,6 +62,7 @@ export interface RefereeData {
   netRevenue: number;
   commission: number;
   nextEvent: string;
+  transactions: TransactionData[];
 }
 
 export interface AdminReferralRow {
@@ -87,6 +91,13 @@ export interface TransactionData {
   occurredAt: string;
   amount: number;
   state: CommissionState;
+  currency?: string | null;
+  grossAmount?: number | null;
+  netAmount?: number | null;
+  rewardPct?: string | null;
+  payableAt?: string | null;
+  paidAt?: string | null;
+  sourceInvoiceId?: string | null;
 }
 
 export interface ProgramTermsData {

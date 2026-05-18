@@ -14,8 +14,18 @@ export function formatCurrency(value: number) {
   return currencyFormatter.format(value);
 }
 
-export function formatSignedCurrency(value: number) {
-  return `${value >= 0 ? "+" : "-"}${currencyFormatter.format(Math.abs(value))}`;
+export function formatSignedCurrency(value: number, currency = "USD") {
+  const code = currency.trim().toUpperCase() || "USD";
+  try {
+    const formatter = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: code,
+      maximumFractionDigits: 2,
+    });
+    return `${value >= 0 ? "+" : "-"}${formatter.format(Math.abs(value))}`;
+  } catch {
+    return `${value >= 0 ? "+" : "-"}${Math.abs(value).toFixed(2)} ${code}`;
+  }
 }
 
 export function formatDate(value: string) {

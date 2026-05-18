@@ -215,10 +215,11 @@ function parseMeRow(row: Record<string, unknown>): ReferralMePayload | null {
   const termsVersion = pickString(row, "termsVersion", "terms_version") || "v1";
   const referralUrl = pickString(row, "referralUrl", "referral_url");
 
-  let code = pickString(row, "code", "referralCode");
+  let code = pickString(row, "code", "referralCode").toUpperCase();
   if (!code && referralUrl) {
     try {
-      code = new URL(referralUrl).searchParams.get("ref")?.trim() ?? "";
+      code =
+        new URL(referralUrl).searchParams.get("ref")?.trim().toUpperCase() ?? "";
     } catch {
       /* ignore */
     }
@@ -326,10 +327,47 @@ export function pendingEnrollmentFromProgram(
   };
 }
 
+/** POST /api/v1/referral/terms/accept — enrollment created; link is built client-side. */
+export type ReferralTermsAcceptPayload = {
+  programId: string;
+  termsVersion: string;
+  code: string;
+  acceptedAt: string;
+  createdAt?: string;
+  idempotent?: boolean;
+};
+
+export function parseReferralTermsAcceptJson(
+  json: unknown,
+): ReferralTermsAcceptPayload | null {
+  const data = unwrapData(json);
+  if (!data) {
+    return null;
+  }
+
+  const programId = pickString(data, "programId", "program_id");
+  const code = pickString(data, "code", "referralCode").toUpperCase();
+  if (!programId || !code) {
+    return null;
+  }
+
+  const acceptedAt =
+    pickString(data, "acceptedAt", "accepted_at") || new Date().toISOString();
+
+  return {
+    programId,
+    termsVersion: pickString(data, "termsVersion", "terms_version") || "v1",
+    code,
+    acceptedAt,
+    createdAt: pickString(data, "createdAt", "created_at") || undefined,
+    idempotent: data.idempotent === true,
+  };
+}
+
 export type ReferralMeFetchResult =
   | { kind: "ok"; payload: ReferralMePayload }
   | { kind: "pending" }
-  | { kind: "error" };
+  | { kind: "error"; status?: number };
 
 export function composeReferralEnrollment(
   program: ReferralProgramPayload,

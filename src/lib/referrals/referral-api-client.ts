@@ -1,198 +1,434 @@
 import {
+  filterActiveSubscriptions,
   parseBillingSubscriptionsMeJson,
+  type BillingRefereeBenefit,
   type BillingSubscription,
 } from "@/lib/referrals/billing-payload";
+import {
+  isAuthApiConfigured,
+  resolveAuthApiBaseUrl,
+} from "@/lib/auth/api-base";
 import { getClientAuthBearer } from "@/lib/referrals/auth-token";
+import {
+  buildReferrerDashboardData,
+  buildReferrerDashboardFromApi,
+} from "@/lib/referrals/build-referrer-dashboard";
+import { parseReferralDashboardJson } from "@/lib/referrals/referral-dashboard-payload";
 import {
   composeReferralEnrollment,
   isPendingEnrollmentNotFound,
   parseReferralMeJson,
   parseReferralProgramJson,
+  parseReferralTermsAcceptJson,
+  pendingEnrollmentFromProgram,
   type ReferralMeFetchResult,
   type ReferralMePayload,
   type ReferralProgramPayload,
+  type ReferralTermsAcceptPayload,
 } from "@/lib/referrals/referral-payload";
-import type { SessionUser } from "@/lib/referrals/types";
+import type { ReferrerDashboardData } from "@/lib/referrals/types";
+import {
+  mapReferralTransactionsToUi,
+  parseReferralTransactionsJson,
+} from "@/lib/referrals/referral-transactions-payload";
+import type { SessionUser, TransactionData } from "@/lib/referrals/types";
+import {
+  parseReferralCodeValidateJson,
+  toValidateReferralCodeResult,
+  type ValidateReferralCodeResult,
+} from "@/lib/referrals/validate-referral-code";
+export type { ValidateReferralCodeResult } from "@/lib/referrals/validate-referral-code";
 
 export function getPublicAuthApiBase(): string | null {
-  const base = process.env.NEXT_PUBLIC_AUTH_API_BASE_URL?.trim();
-  return base ? base.replace(/\/$/, "") : null;
+  return resolveAuthApiBaseUrl();
 }
 
-function authHeaders(bearer: string): Record<string, string> {
-  return {
+export { isAuthApiConfigured };
+
+function isBrowser(): boolean {
+  return typeof window !== "undefined";
+}
+
+/**
+ * Browser: same-origin `/api/v1/*` proxy (reads HttpOnly session cookie server-side).
+ * SSR/tests: direct `AUTH_API_BASE_URL` when available.
+ */
+function resolveClientFetchOrigin(): string {
+  if (isBrowser()) {
+    return "";
+  }
+  return resolveAuthApiBaseUrl() ?? "";
+}
+
+type ApiFetchInit = Omit<RequestInit, "headers"> & {
+  headers?: Record<string, string>;
+  auth?: boolean;
+};
+
+async function apiFetch(
+  path: string,
+  init: ApiFetchInit = {},
+): Promise<Response> {
+  const { auth = true, headers = {}, ...rest } = init;
+  const origin = resolveClientFetchOrigin();
+  const mergedHeaders: Record<string, string> = {
     accept: "application/json",
-    authorization: `Bearer ${bearer}`,
+    ...headers,
   };
-}
 
-async function apiGet(base: string, bearer: string, path: string): Promise<Response> {
-  return fetch(`${base}${path}`, {
-    method: "GET",
-    headers: authHeaders(bearer),
+  if (!isBrowser() && auth) {
+    const bearer = getClientAuthBearer();
+    if (bearer) {
+      mergedHeaders.authorization = `Bearer ${bearer}`;
+    }
+  }
+
+  return fetch(`${origin}${path}`, {
+    ...rest,
+    headers: mergedHeaders,
+    credentials: isBrowser() ? "include" : rest.credentials,
   });
 }
 
-export async function fetchReferralProgramClient(
-  base: string,
-  bearer: string,
-): Promise<ReferralProgramPayload | null> {
-  const response = await apiGet(base, bearer, "/api/v1/referral/program");
-  if (!response.ok) {
-    console.error("[fetchReferralProgramClient] non-OK", response.status, await response.text());
-    return null;
-  }
+export type ReferralProgramFetchResult =
+  | { kind: "ok"; payload: ReferralProgramPayload }
+  | { kind: "error"; status?: number };
+
+export async function fetchReferralProgramClient(): Promise<ReferralProgramFetchResult> {
   try {
-    return parseReferralProgramJson(await response.json());
-  } catch {
-    return null;
+    const response = await apiFetch("/api/v1/referral/program");
+    if (!response.ok) {
+      console.error(
+        "[fetchReferralProgramClient] non-OK",
+        response.status,
+        await response.text(),
+      );
+      return { kind: "error", status: response.status };
+    }
+    const parsed = parseReferralProgramJson(await response.json());
+    if (parsed) {
+      return { kind: "ok", payload: parsed };
+    }
+    return { kind: "error", status: response.status };
+  } catch (error) {
+    console.error("[fetchReferralProgramClient] fetch threw", error);
+    return { kind: "error" };
   }
 }
 
-export async function fetchReferralMeClient(
-  base: string,
-  bearer: string,
-): Promise<ReferralMeFetchResult> {
-  const response = await apiGet(base, bearer, "/api/v1/referral/me");
-
-  if (!response.ok) {
-    const body = await response.text();
-    if (isPendingEnrollmentNotFound(response.status, body)) {
-      return { kind: "pending" };
-    }
-    console.error("[fetchReferralMeClient] non-OK", response.status, body);
-    return { kind: "error" };
-  }
-
+export async function fetchReferralMeClient(): Promise<ReferralMeFetchResult> {
   try {
+    const response = await apiFetch("/api/v1/referral/me");
+
+    if (!response.ok) {
+      const body = await response.text();
+      if (isPendingEnrollmentNotFound(response.status, body)) {
+        return { kind: "pending" };
+      }
+      console.error("[fetchReferralMeClient] non-OK", response.status, body);
+      return { kind: "error", status: response.status };
+    }
+
     const parsed = parseReferralMeJson(await response.json());
     if (parsed) {
       return { kind: "ok", payload: parsed };
     }
-  } catch {
-    /* fall through */
+    return { kind: "error" };
+  } catch (error) {
+    console.error("[fetchReferralMeClient] fetch threw", error);
+    return { kind: "error" };
   }
-
-  return { kind: "error" };
 }
 
-/** GET program, then GET /me — visible in browser DevTools Network tab. */
-export async function loadReferralEnrollmentClient(): Promise<ReferralMePayload | null> {
-  const base = getPublicAuthApiBase();
-  const bearer = getClientAuthBearer();
-  if (!base || !bearer) {
-    return null;
+export type ReferralEnrollmentLoadResult = {
+  enrollment: ReferralMePayload | null;
+  issue?: "misconfigured" | "no_session" | "api_unreachable" | "unauthorized";
+};
+
+export type ReferralDashboardLoadResult = {
+  data: ReferrerDashboardData | null;
+  issue?: "misconfigured" | "no_session" | "api_unreachable" | "unauthorized";
+};
+
+export type ReferralDashboardFetchResult =
+  | {
+      kind: "ok";
+      payload: NonNullable<ReturnType<typeof parseReferralDashboardJson>>;
+    }
+  | { kind: "pending" }
+  | { kind: "error"; status?: number };
+
+/** GET /api/v1/referral/me/dashboard — referees, summary stats, and commissions. */
+export async function fetchReferralDashboardClient(): Promise<ReferralDashboardFetchResult> {
+  if (!isAuthApiConfigured()) {
+    return { kind: "error" };
   }
 
-  const program = await fetchReferralProgramClient(base, bearer);
-  if (!program) {
-    return null;
-  }
+  try {
+    const response = await apiFetch("/api/v1/referral/me/dashboard");
+    if (!response.ok) {
+      const body = await response.text();
+      if (isPendingEnrollmentNotFound(response.status, body)) {
+        return { kind: "pending" };
+      }
+      console.error(
+        "[fetchReferralDashboardClient] non-OK",
+        response.status,
+        body,
+      );
+      return { kind: "error", status: response.status };
+    }
 
-  const me = await fetchReferralMeClient(base, bearer);
-  return composeReferralEnrollment(program, me);
+    const parsed = parseReferralDashboardJson(await response.json());
+    if (parsed) {
+      return { kind: "ok", payload: parsed };
+    }
+    return { kind: "error", status: response.status };
+  } catch (error) {
+    console.error("[fetchReferralDashboardClient] fetch threw", error);
+    return { kind: "error" };
+  }
 }
 
-export async function fetchBillingSubscriptionsMeClient(): Promise<{
-  subscriptions: BillingSubscription[];
+/** GET program + GET /me/dashboard — primary referral dashboard loader. */
+export async function loadReferralDashboardClient(): Promise<ReferralDashboardLoadResult> {
+  if (!isAuthApiConfigured()) {
+    return { data: null, issue: "misconfigured" };
+  }
+
+  const program = await fetchReferralProgramClient();
+  if (program.kind === "error") {
+    if (program.status === 401) {
+      return { data: null, issue: "no_session" };
+    }
+    return { data: null, issue: "api_unreachable" };
+  }
+
+  const dashboard = await fetchReferralDashboardClient();
+  const appBaseUrl = isBrowser() ? window.location.origin : undefined;
+
+  if (dashboard.kind === "ok") {
+    return {
+      data: buildReferrerDashboardFromApi(
+        dashboard.payload,
+        program.payload,
+        appBaseUrl,
+      ),
+    };
+  }
+
+  if (dashboard.kind === "pending") {
+    return {
+      data: buildReferrerDashboardData(
+        pendingEnrollmentFromProgram(program.payload),
+        appBaseUrl,
+      ),
+    };
+  }
+
+  if (dashboard.kind === "error" && dashboard.status === 401) {
+    return { data: null, issue: "unauthorized" };
+  }
+
+  return { data: null, issue: "api_unreachable" };
+}
+
+/** GET program, then GET /me — visible in DevTools as `/api/v1/referral/*` on your app origin. */
+export async function loadReferralEnrollmentClient(): Promise<ReferralEnrollmentLoadResult> {
+  if (!isAuthApiConfigured()) {
+    return { enrollment: null, issue: "misconfigured" };
+  }
+
+  const program = await fetchReferralProgramClient();
+  if (program.kind === "error") {
+    if (program.status === 401) {
+      return { enrollment: null, issue: "no_session" };
+    }
+    return { enrollment: null, issue: "api_unreachable" };
+  }
+
+  const me = await fetchReferralMeClient();
+  if (me.kind === "error" && me.status === 401) {
+    return { enrollment: null, issue: "unauthorized" };
+  }
+
+  const enrollment = composeReferralEnrollment(program.payload, me);
+  if (!enrollment) {
+    return { enrollment: null, issue: "api_unreachable" };
+  }
+
+  return { enrollment };
+}
+
+/** GET /api/v1/referral/me/transactions — commission history for the referrer. */
+export async function fetchReferralTransactionsClient(): Promise<{
+  transactions: TransactionData[];
   status: number;
 }> {
-  const base = getPublicAuthApiBase();
-  const bearer = getClientAuthBearer();
-  if (!base || !bearer) {
-    return { subscriptions: [], status: 0 };
+  if (!isAuthApiConfigured()) {
+    return { transactions: [], status: 0 };
   }
 
-  const response = await apiGet(base, bearer, "/api/v1/billing/subscriptions/me");
+  try {
+    const response = await apiFetch("/api/v1/referral/me/transactions");
+    if (!response.ok) {
+      console.error(
+        "[fetchReferralTransactionsClient] non-OK",
+        response.status,
+        await response.text(),
+      );
+      return { transactions: [], status: response.status };
+    }
+
+    const payload = parseReferralTransactionsJson(await response.json());
+    return {
+      transactions: mapReferralTransactionsToUi(payload.transactions),
+      status: response.status,
+    };
+  } catch (error) {
+    console.error("[fetchReferralTransactionsClient] fetch threw", error);
+    return { transactions: [], status: 0 };
+  }
+}
+
+/** Loads the signed-in user from the HttpOnly session cookie (server reads cookie). */
+export async function fetchSessionUserClient(): Promise<SessionUser | null> {
+  if (!isBrowser()) {
+    return null;
+  }
+
+  try {
+    const response = await fetch("/api/auth/session", {
+      credentials: "include",
+    });
+    if (!response.ok) {
+      return null;
+    }
+    const json = (await response.json()) as { user?: SessionUser };
+    return json.user ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** GET /api/v1/billing/subscriptions/me — DevTools: `/api/v1/billing/subscriptions/me`. */
+export async function fetchBillingSubscriptionsMeClient(): Promise<{
+  subscriptions: BillingSubscription[];
+  activeSubscriptions: BillingSubscription[];
+  refereeBenefit: BillingRefereeBenefit | null;
+  status: number;
+}> {
+  if (!isAuthApiConfigured()) {
+    return {
+      subscriptions: [],
+      activeSubscriptions: [],
+      refereeBenefit: null,
+      status: 0,
+    };
+  }
+
+  const response = await apiFetch("/api/v1/billing/subscriptions/me");
   if (!response.ok) {
     console.error(
       "[fetchBillingSubscriptionsMeClient] non-OK",
       response.status,
       await response.text(),
     );
-    return { subscriptions: [], status: response.status };
+    return {
+      subscriptions: [],
+      activeSubscriptions: [],
+      refereeBenefit: null,
+      status: response.status,
+    };
   }
 
   try {
     const json = await response.json();
+    const payload = parseBillingSubscriptionsMeJson(json);
     return {
-      subscriptions: parseBillingSubscriptionsMeJson(json),
+      subscriptions: payload.subscriptions,
+      activeSubscriptions: filterActiveSubscriptions(payload.subscriptions),
+      refereeBenefit: payload.refereeBenefit,
       status: response.status,
     };
   } catch {
-    return { subscriptions: [], status: response.status };
+    return {
+      subscriptions: [],
+      activeSubscriptions: [],
+      refereeBenefit: null,
+      status: response.status,
+    };
   }
 }
 
-export async function fetchAuthMeClient(): Promise<SessionUser | null> {
-  const base = getPublicAuthApiBase();
-  const bearer = getClientAuthBearer();
-  if (!base || !bearer) {
-    return null;
+/** POST /api/v1/referral/code/validate — browser signup validation. */
+export async function validateReferralCodeClient(
+  code: string,
+): Promise<ValidateReferralCodeResult> {
+  const normalized = code.trim().toUpperCase();
+  if (!normalized) {
+    return { kind: "invalid", code: normalized };
   }
 
-  const response = await apiGet(base, bearer, "/api/v1/auth/me");
-  if (!response.ok) {
-    return null;
+  if (!isAuthApiConfigured()) {
+    return { kind: "error" };
   }
 
   try {
-    const json = await response.json();
-    if (!json || typeof json !== "object") {
-      return null;
-    }
-    const root = json as Record<string, unknown>;
-    const data =
-      root.data && typeof root.data === "object"
-        ? (root.data as Record<string, unknown>)
-        : root;
-    const user =
-      data.user && typeof data.user === "object"
-        ? (data.user as Record<string, unknown>)
-        : data;
+    const response = await apiFetch("/api/v1/referral/code/validate", {
+      method: "POST",
+      auth: false,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ code: normalized }),
+    });
 
-    const email =
-      typeof user.email === "string" ? user.email.trim().toLowerCase() : "";
-    if (!email) {
-      return null;
+    if (response.status === 400) {
+      return { kind: "invalid", code: normalized };
     }
 
-    const id =
-      typeof user.id === "string"
-        ? user.id.trim()
-        : typeof user.userId === "string"
-          ? user.userId.trim()
-          : email;
+    if (!response.ok) {
+      console.error(
+        "[validateReferralCodeClient] non-OK",
+        response.status,
+        await response.text(),
+      );
+      return { kind: "error" };
+    }
 
-    const name =
-      typeof user.name === "string" && user.name.trim()
-        ? user.name.trim()
-        : (email.split("@")[0] ?? "Referrer");
-
-    return { id, name, email };
-  } catch {
-    return null;
+    return toValidateReferralCodeResult(
+      normalized,
+      parseReferralCodeValidateJson(await response.json()),
+    );
+  } catch (error) {
+    console.error("[validateReferralCodeClient] fetch threw", error);
+    return { kind: "error" };
   }
 }
 
-export async function acceptReferralTermsClient(): Promise<{
-  ok: boolean;
-  status: number;
-}> {
-  const base = getPublicAuthApiBase();
-  const bearer = getClientAuthBearer();
-  if (!base || !bearer) {
+export type ReferralTermsAcceptClientResult =
+  | { ok: true; accept: ReferralTermsAcceptPayload }
+  | { ok: false; status: number };
+
+export async function acceptReferralTermsClient(): Promise<ReferralTermsAcceptClientResult> {
+  if (!isAuthApiConfigured()) {
     return { ok: false, status: 0 };
   }
 
-  const response = await fetch(`${base}/api/v1/referral/terms/accept`, {
+  const response = await apiFetch("/api/v1/referral/terms/accept", {
     method: "POST",
-    headers: {
-      ...authHeaders(bearer),
-      "content-type": "application/json",
-    },
+    headers: { "content-type": "application/json" },
     body: JSON.stringify({}),
   });
 
-  return { ok: response.ok, status: response.status };
+  if (!response.ok) {
+    return { ok: false, status: response.status };
+  }
+
+  const accept = parseReferralTermsAcceptJson(await response.json());
+  if (!accept) {
+    console.error("[acceptReferralTermsClient] unexpected accept response shape");
+    return { ok: false, status: response.status };
+  }
+
+  return { ok: true, accept };
 }

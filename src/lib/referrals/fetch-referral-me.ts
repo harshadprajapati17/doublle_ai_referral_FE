@@ -64,7 +64,7 @@ async function fetchReferralMeResponse(
 
 /**
  * Server-side: GET /api/v1/referral/program, then GET /api/v1/referral/me.
- * The live `/referal` page uses `loadReferralEnrollmentClient` instead (browser DevTools).
+ * The live `/referal` page loads via `loadReferralEnrollmentClient` (browser fetch, DevTools Network).
  */
 export async function fetchReferralMe(): Promise<ReferralMePayload | null> {
   const base = getAuthApiBase();
