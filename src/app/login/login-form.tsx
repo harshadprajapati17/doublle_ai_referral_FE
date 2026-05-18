@@ -154,6 +154,16 @@ export function LoginForm({ returnTo, initialError }: LoginFormProps) {
         >
           {pending ? "Signing in…" : "Sign in"}
         </button>
+
+        <p className="text-center text-sm text-slate-600">
+          Don&apos;t have an account?{" "}
+          <a
+            href="/signup"
+            className="font-semibold text-sky-700 underline-offset-2 hover:underline"
+          >
+            Sign up
+          </a>
+        </p>
       </form>
     </>
   );
