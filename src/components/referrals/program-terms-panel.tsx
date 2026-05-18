@@ -61,7 +61,7 @@ export function ProgramTermsPanel({ terms }: ProgramTermsPanelProps) {
   return (
     <section
       id="program-terms"
-      className="scroll-mt-6 rounded-[32px] border border-slate-200 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.08)]"
+      className="scroll-mt-6 rounded-2xl border border-slate-200 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.05)]"
     >
       <button
         type="button"

@@ -29,7 +29,7 @@ export function HeroCard({ hero }: HeroCardProps) {
   const shareLinks = buildShareLinks(hero);
 
   return (
-    <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-white/95 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur">
+    <section className="rounded-2xl border border-slate-200 bg-white/95 shadow-[0_12px_32px_rgba(15,23,42,0.05)] backdrop-blur">
       <div className="grid gap-8 px-6 py-6 sm:px-8 sm:py-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)] lg:gap-10">
         <div className="space-y-6">
           <div className="space-y-4">
@@ -74,7 +74,7 @@ export function HeroCard({ hero }: HeroCardProps) {
           </div>
         </div>
 
-        <div className="rounded-[28px] border border-slate-200 bg-slate-50/90 p-5 sm:p-6">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/90 p-5 sm:p-6">
           <div className="space-y-5">
             <div className="space-y-2">
               <p className="text-sm font-medium text-slate-600">Personal link</p>

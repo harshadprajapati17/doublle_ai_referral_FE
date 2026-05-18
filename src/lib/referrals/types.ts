@@ -1,4 +1,23 @@
+export type ReferralTermsAcceptFormAction = (
+  formData: FormData,
+) => Promise<void>;
+
 export type CommissionState = "pending" | "earned" | "paid" | "clawedBack";
+
+/** `error` query param on `/login` after failed sign-in */
+export type LoginQueryError =
+  | "invalid-credentials"
+  | "missing-credentials"
+  | "server-unavailable"
+  | "session-expired"
+  | "auth-misconfigured";
+
+/** `termsError` query param after accept-referral-terms server action redirect */
+export type ReferralTermsAcceptQueryError =
+  | "server-unavailable"
+  | "terms-misconfigured"
+  | "terms-unavailable"
+  | "terms-rejected";
 
 export type StatId =
   | "clicks"
@@ -20,12 +39,15 @@ export interface HeroData {
   termsHref: string;
 }
 
+export type StatStatusTone = "positive" | "neutral" | "muted" | "unavailable";
+
 export interface StatData {
   id: StatId;
   label: string;
   value: string;
   change: string;
   helper: string;
+  statusTone: StatStatusTone;
 }
 
 export interface RefereeData {
@@ -40,6 +62,7 @@ export interface RefereeData {
   netRevenue: number;
   commission: number;
   nextEvent: string;
+  transactions: TransactionData[];
 }
 
 export interface AdminReferralRow {
@@ -68,6 +91,13 @@ export interface TransactionData {
   occurredAt: string;
   amount: number;
   state: CommissionState;
+  currency?: string | null;
+  grossAmount?: number | null;
+  netAmount?: number | null;
+  rewardPct?: string | null;
+  payableAt?: string | null;
+  paidAt?: string | null;
+  sourceInvoiceId?: string | null;
 }
 
 export interface ProgramTermsData {
@@ -98,52 +128,16 @@ export interface ReferrerDashboardData extends ReferrerDashboardBaseData {
   termsAcceptance: TermsAcceptanceData | null;
 }
 
-export interface ReferrerDashboardRecord extends ReferrerDashboardBaseData {
-  id: string;
-  userId: string;
-}
-
-export interface MockUserRecord {
-  id: string;
-  name: string;
-  email: string;
-  password: string;
-  role: "referrer";
-}
-
 export interface SessionUser {
   id: string;
   name: string;
   email: string;
 }
 
-export interface MockPricingPlan {
+export interface SignupPlan {
   id: string;
   name: string;
   description: string;
-  monthlyRevenue: number;
   labelMonthlyRevenue: number;
-  savingsLabel: string;
   badge?: string;
-}
-
-export interface MockSignupSubmissionRecord {
-  id: string;
-  referrerUserId: string;
-  workEmail: string;
-  companyName: string;
-  referralCode: string;
-  planId: string;
-  planName: string;
-  monthlyRevenue: number;
-  labelMonthlyRevenue?: number;
-  commissionAmount: number;
-  source: string;
-  status: "paid";
-  createdAt: string;
-}
-
-export interface MockTermsAcceptanceRecord extends TermsAcceptanceData {
-  id: string;
-  userId: string;
 }

@@ -8,12 +8,12 @@ interface AdminReferralsTableProps {
 
 function EmptyTableState() {
   return (
-    <div className="flex min-h-[240px] items-center justify-center rounded-[28px] border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center">
+    <div className="flex min-h-[240px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center">
       <div>
         <h3 className="text-lg font-semibold text-slate-900">No referral records yet</h3>
         <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">
-          This admin list reads from the local mock database. Submit a referral
-          signup or seed dashboard referee records to populate it.
+          Wire this table to your admin referral API to list referees and payouts
+          across referrers.
         </p>
       </div>
     </div>
@@ -29,7 +29,7 @@ export function AdminReferralsTable({ referrals }: AdminReferralsTableProps) {
   );
 
   return (
-    <section className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] sm:p-8">
+    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] sm:p-8">
       <div className="flex flex-col gap-4 border-b border-slate-200 pb-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -50,7 +50,7 @@ export function AdminReferralsTable({ referrals }: AdminReferralsTableProps) {
         </div>
 
         <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-4">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
               Total records
             </p>
@@ -58,7 +58,7 @@ export function AdminReferralsTable({ referrals }: AdminReferralsTableProps) {
               {referrals.length}
             </p>
           </div>
-          <div className="rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-4">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
               Active referrers
             </p>
@@ -66,7 +66,7 @@ export function AdminReferralsTable({ referrals }: AdminReferralsTableProps) {
               {uniqueReferrers}
             </p>
           </div>
-          <div className="rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-4">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
               Pending commission
             </p>
@@ -86,7 +86,7 @@ export function AdminReferralsTable({ referrals }: AdminReferralsTableProps) {
               {referrals.map((referral) => (
                 <article
                   key={referral.id}
-                  className="rounded-[24px] border border-slate-200 bg-slate-50 p-5"
+                  className="rounded-2xl border border-slate-200 bg-slate-50 p-5"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -175,8 +175,8 @@ export function AdminReferralsTable({ referrals }: AdminReferralsTableProps) {
                 </thead>
                 <tbody>
                   {referrals.map((referral) => (
-                    <tr key={referral.id} className="overflow-hidden rounded-3xl bg-slate-50">
-                      <td className="rounded-l-3xl px-4 py-4">
+                    <tr key={referral.id} className="overflow-hidden rounded-2xl bg-slate-50">
+                      <td className="rounded-l-2xl px-4 py-4">
                         <div>
                           <p className="font-semibold text-slate-950">
                             {referral.referrerName}
@@ -217,7 +217,7 @@ export function AdminReferralsTable({ referrals }: AdminReferralsTableProps) {
                       <td className="px-4 py-4 text-sm font-semibold text-slate-950">
                         {formatCurrency(referral.commission)}
                       </td>
-                      <td className="rounded-r-3xl px-4 py-4 text-sm text-slate-700">
+                      <td className="rounded-r-2xl px-4 py-4 text-sm text-slate-700">
                         {referral.nextEvent}
                       </td>
                     </tr>
