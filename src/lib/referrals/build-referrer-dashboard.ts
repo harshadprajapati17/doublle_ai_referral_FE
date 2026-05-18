@@ -41,7 +41,7 @@ function buildHeroData(me: ReferralMePayload, appBaseUrl?: string): HeroData {
     rewardDuration: me.rewardDuration?.trim() || "—",
     payoutType: me.payoutType?.trim() || "—",
     cookieWindowDays: me.cookieWindowDays ?? 30,
-    note: "Manual code entry at signup overrides any active referral cookie.",
+    note: `Code at signup overrides cookies · ${me.cookieWindowDays ?? 30}-day link window`,
     termsHref: "#program-terms",
   };
 }

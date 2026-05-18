@@ -30,11 +30,11 @@ function TermsGatePreview({
   return (
     <section
       id="overview"
-      className="relative w-full rounded-2xl border border-slate-200 bg-white/95 shadow-[0_12px_32px_rgba(15,23,42,0.05)]"
+      className="relative w-full overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-[0_20px_50px_rgba(15,23,42,0.06)]"
     >
       <div
         aria-hidden="true"
-        className="grid w-full gap-8 px-6 py-6 sm:px-8 sm:py-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)] lg:gap-10"
+        className="grid w-full gap-0 lg:grid-cols-[minmax(0,1fr)_minmax(300px,380px)]"
       >
         <div className="space-y-6 blur-[3px]">
           <div className="space-y-4">
@@ -108,7 +108,7 @@ function TermsGatePreview({
         <div className="rounded-2xl border border-slate-200 bg-slate-50/90 p-5 blur-[3px] sm:p-6">
           <div className="space-y-5">
             <div className="space-y-2">
-              <p className="text-sm font-medium text-slate-600">Personal link</p>
+              <p className="text-sm font-medium text-slate-600">Referral link</p>
               <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
                 <div className="h-5 w-full rounded-full bg-slate-200" />
               </div>
@@ -175,15 +175,14 @@ export function DashboardShell({
 
   return (
     <WorkspaceAppShell activeNav="referral" user={user}>
-      <header className="mb-6">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sky-700">
-          Referral
-        </p>
-        <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-          Refer & earn
-        </h2>
-        <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
-          Manage your personal referral link, conversions, and commission activity.
+      <header className="mb-8">
+        <p className="text-sm font-medium text-sky-700">Referral program</p>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 sm:text-[2rem]">
+          Refer teams, earn credit
+        </h1>
+        <p className="mt-2 max-w-2xl text-base leading-7 text-slate-600">
+          Share your link with teams you trust and earn recurring Doublle credit when they
+          subscribe.
         </p>
       </header>
 

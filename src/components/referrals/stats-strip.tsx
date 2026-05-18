@@ -13,33 +13,42 @@ const statusToneClass: Record<StatStatusTone, string> = {
 
 export function StatsStrip({ stats }: StatsStripProps) {
   return (
-    <section
-      aria-label="Referral performance"
-      className="grid gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-4"
-    >
-      {stats.map((stat) => (
-        <article
-          key={stat.id}
-          className="flex min-w-0 flex-col rounded-2xl border border-slate-200/90 bg-white px-5 py-5 shadow-[0_12px_32px_rgba(15,23,42,0.05)] sm:px-6 sm:py-6"
-        >
-          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-slate-500">
-            {stat.label}
+    <section aria-labelledby="referral-performance-heading">
+      <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2
+            id="referral-performance-heading"
+            className="text-lg font-semibold tracking-tight text-slate-950"
+          >
+            Your performance
+          </h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Live counts update as referrals click, sign up, and convert.
           </p>
-          <div className="mt-3 flex flex-col gap-4">
-            <p className="text-[1.75rem] font-semibold leading-none tracking-tight text-slate-950 tabular-nums sm:text-3xl">
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
+        {stats.map((stat) => (
+          <article
+            key={stat.id}
+            className="flex min-w-0 flex-col rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] ring-1 ring-slate-950/[0.02] sm:p-6"
+          >
+            <p className="text-xs font-medium text-slate-500">{stat.label}</p>
+            <p className="mt-3 text-[1.75rem] font-semibold leading-none tracking-tight text-slate-950 tabular-nums sm:text-3xl">
               {stat.value}
             </p>
             <p
-              className={`text-sm font-medium leading-snug ${statusToneClass[stat.statusTone]}`}
+              className={`mt-3 text-sm font-medium leading-snug ${statusToneClass[stat.statusTone]}`}
             >
               {stat.change}
             </p>
-          </div>
-          <div className="mt-6 border-t border-slate-100 pt-5">
-            <p className="text-xs leading-relaxed text-slate-500">{stat.helper}</p>
-          </div>
-        </article>
-      ))}
+            <p className="mt-4 border-t border-slate-100 pt-4 text-xs leading-relaxed text-slate-500">
+              {stat.helper}
+            </p>
+          </article>
+        ))}
+      </div>
     </section>
   );
 }
