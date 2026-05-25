@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
-import { ReferralDashboard } from "@/app/referal/referral-dashboard";
+import { ReferralDashboard } from "@/app/(workspace)/referal/referral-dashboard";
+import { WorkspaceMainLoading } from "@/components/workspace/workspace-main-loading";
 import { isAuthApiConfigured } from "@/lib/auth/api-base";
 
 export const metadata: Metadata = {
@@ -12,13 +13,7 @@ export const metadata: Metadata = {
 
 export default function ReferralPage() {
   return (
-    <Suspense
-      fallback={
-        <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,_#f4f7fb_0%,_#eef3f8_100%)]">
-          <p className="text-sm font-medium text-slate-600">Loading referral dashboard…</p>
-        </main>
-      }
-    >
+    <Suspense fallback={<WorkspaceMainLoading label="Loading referral dashboard…" />}>
       <ReferralDashboard apiConfigured={isAuthApiConfigured()} />
     </Suspense>
   );

@@ -84,14 +84,12 @@ function buildProgramTermsItems(row: Record<string, unknown>): string[] {
   const pct = pickString(row, "referrerRewardPct", "referrer_reward_pct") || "0";
   const months =
     pickNumber(row, "referrerRewardDurationMonths", "referrer_reward_duration_months") ?? 12;
-  const cookieDays = pickNumber(row, "cookieDays", "cookie_days") ?? 30;
   const holdDays = pickNumber(row, "holdPeriodDays", "hold_period_days") ?? 30;
   const rule = pickString(row, "attributionRule", "attribution_rule");
 
   const items: string[] = [
     `You earn ${pct}% of referred net revenue for up to ${months} months.`,
     attributionLabel(rule),
-    `Referral cookies last ${cookieDays} days by default.`,
     `Commissions move from Pending to Earned after a ${holdDays}-day hold, then apply as Doublle account credit.`,
     "Refunds, chargebacks, and disputes can reverse pending or paid commissions.",
   ];

@@ -1,3 +1,6 @@
+import {
+  workspaceFluidContentClass,
+} from "@/components/workspace/workspace-content-inset";
 import type { StatData, StatStatusTone } from "@/lib/referrals/types";
 
 interface StatsStripProps {
@@ -5,49 +8,59 @@ interface StatsStripProps {
 }
 
 const statusToneClass: Record<StatStatusTone, string> = {
-  positive: "text-emerald-700",
-  neutral: "text-sky-700",
-  muted: "text-slate-500",
-  unavailable: "text-slate-400",
+  positive: "text-emerald-600",
+  neutral: "text-ws-secondary",
+  muted: "text-ws-muted",
+  unavailable: "text-ws-muted",
 };
 
 export function StatsStrip({ stats }: StatsStripProps) {
   return (
-    <section aria-labelledby="referral-performance-heading">
-      <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+    <section
+      aria-labelledby="referral-performance-heading"
+      className="w-full bg-ws-page"
+    >
+      <div className={`${workspaceFluidContentClass} pb-8`}>
+        <div className="mb-5">
           <h2
             id="referral-performance-heading"
-            className="text-lg font-semibold tracking-tight text-slate-950"
+            className="text-base font-semibold tracking-[-0.01em] text-ws-primary"
           >
             Your performance
           </h2>
-          <p className="mt-1 text-sm text-slate-600">
+          <p className="mt-1 text-[0.8125rem] leading-relaxed text-ws-secondary">
             Live counts update as referrals click, sign up, and convert.
           </p>
         </div>
-      </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
-        {stats.map((stat) => (
-          <article
-            key={stat.id}
-            className="flex min-w-0 flex-col rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] ring-1 ring-slate-950/[0.02] sm:p-6"
-          >
-            <p className="text-xs font-medium text-slate-500">{stat.label}</p>
-            <p className="mt-3 text-[1.75rem] font-semibold leading-none tracking-tight text-slate-950 tabular-nums sm:text-3xl">
-              {stat.value}
-            </p>
-            <p
-              className={`mt-3 text-sm font-medium leading-snug ${statusToneClass[stat.statusTone]}`}
-            >
-              {stat.change}
-            </p>
-            <p className="mt-4 border-t border-slate-100 pt-4 text-xs leading-relaxed text-slate-500">
-              {stat.helper}
-            </p>
-          </article>
-        ))}
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {stats.map((stat) => {
+            const isEarnings = stat.id === "totalEarned";
+            return (
+              <article
+                key={stat.id}
+                className={`flex min-w-0 flex-col rounded-xl border px-5 py-4 ${
+                  isEarnings
+                    ? "border-brand/20 bg-brand-soft/50"
+                    : "border-ws-border bg-white"
+                }`}
+              >
+                <p className={`text-[0.6875rem] font-medium uppercase tracking-wider ${isEarnings ? "text-brand" : "text-ws-muted"}`}>
+                  {stat.label}
+                </p>
+                <p className={`mt-2.5 text-2xl font-semibold leading-none tracking-tight tabular-nums ${isEarnings ? "text-brand" : "text-ws-primary"}`}>
+                  {stat.value}
+                </p>
+                <p className={`mt-2.5 text-xs font-medium leading-snug ${statusToneClass[stat.statusTone]}`}>
+                  {stat.change}
+                </p>
+                {stat.helper ? (
+                  <p className="mt-2 text-[0.6875rem] leading-relaxed text-ws-muted">{stat.helper}</p>
+                ) : null}
+              </article>
+            );
+          })}
+        </div>
       </div>
     </section>
   );

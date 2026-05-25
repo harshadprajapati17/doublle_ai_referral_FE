@@ -3,6 +3,7 @@ import "server-only";
 import {
   filterActiveSubscriptions,
   parseBillingSubscriptionsMeJson,
+  type BillingAccountCredits,
   type BillingRefereeBenefit,
   type BillingSubscription,
 } from "@/lib/referrals/billing-payload";
@@ -11,6 +12,7 @@ import { getAuthApiBase, referralApiHeaders } from "@/lib/referrals/auth-api";
 export type BillingSubscriptionsMeResult = {
   subscriptions: BillingSubscription[];
   activeSubscriptions: BillingSubscription[];
+  accountCredits: BillingAccountCredits | null;
   refereeBenefit: BillingRefereeBenefit | null;
   status: number;
 };
@@ -20,7 +22,13 @@ export async function fetchBillingSubscriptionsMe(): Promise<BillingSubscription
   const base = getAuthApiBase();
   const headers = await referralApiHeaders();
   if (!base || !headers) {
-    return { subscriptions: [], activeSubscriptions: [], refereeBenefit: null, status: 0 };
+    return {
+      subscriptions: [],
+      activeSubscriptions: [],
+      accountCredits: null,
+      refereeBenefit: null,
+      status: 0,
+    };
   }
 
   const url = `${base}/api/v1/billing/subscriptions/me`;
@@ -34,7 +42,13 @@ export async function fetchBillingSubscriptionsMe(): Promise<BillingSubscription
     });
   } catch (error) {
     console.error("[fetchBillingSubscriptionsMe] fetch threw", { url, error });
-    return { subscriptions: [], activeSubscriptions: [], refereeBenefit: null, status: 0 };
+    return {
+      subscriptions: [],
+      activeSubscriptions: [],
+      accountCredits: null,
+      refereeBenefit: null,
+      status: 0,
+    };
   }
 
   if (!response.ok) {
@@ -46,6 +60,7 @@ export async function fetchBillingSubscriptionsMe(): Promise<BillingSubscription
     return {
       subscriptions: [],
       activeSubscriptions: [],
+      accountCredits: null,
       refereeBenefit: null,
       status: response.status,
     };
@@ -56,6 +71,7 @@ export async function fetchBillingSubscriptionsMe(): Promise<BillingSubscription
     return {
       subscriptions: payload.subscriptions,
       activeSubscriptions: filterActiveSubscriptions(payload.subscriptions),
+      accountCredits: payload.accountCredits,
       refereeBenefit: payload.refereeBenefit,
       status: response.status,
     };
@@ -63,6 +79,7 @@ export async function fetchBillingSubscriptionsMe(): Promise<BillingSubscription
     return {
       subscriptions: [],
       activeSubscriptions: [],
+      accountCredits: null,
       refereeBenefit: null,
       status: response.status,
     };

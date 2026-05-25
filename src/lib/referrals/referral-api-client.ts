@@ -1,6 +1,7 @@
 import {
   filterActiveSubscriptions,
   parseBillingSubscriptionsMeJson,
+  type BillingAccountCredits,
   type BillingRefereeBenefit,
   type BillingSubscription,
 } from "@/lib/referrals/billing-payload";
@@ -315,6 +316,7 @@ export async function fetchSessionUserClient(): Promise<SessionUser | null> {
 export async function fetchBillingSubscriptionsMeClient(): Promise<{
   subscriptions: BillingSubscription[];
   activeSubscriptions: BillingSubscription[];
+  accountCredits: BillingAccountCredits | null;
   refereeBenefit: BillingRefereeBenefit | null;
   status: number;
 }> {
@@ -322,6 +324,7 @@ export async function fetchBillingSubscriptionsMeClient(): Promise<{
     return {
       subscriptions: [],
       activeSubscriptions: [],
+      accountCredits: null,
       refereeBenefit: null,
       status: 0,
     };
@@ -337,6 +340,7 @@ export async function fetchBillingSubscriptionsMeClient(): Promise<{
     return {
       subscriptions: [],
       activeSubscriptions: [],
+      accountCredits: null,
       refereeBenefit: null,
       status: response.status,
     };
@@ -348,6 +352,7 @@ export async function fetchBillingSubscriptionsMeClient(): Promise<{
     return {
       subscriptions: payload.subscriptions,
       activeSubscriptions: filterActiveSubscriptions(payload.subscriptions),
+      accountCredits: payload.accountCredits,
       refereeBenefit: payload.refereeBenefit,
       status: response.status,
     };
@@ -355,6 +360,7 @@ export async function fetchBillingSubscriptionsMeClient(): Promise<{
     return {
       subscriptions: [],
       activeSubscriptions: [],
+      accountCredits: null,
       refereeBenefit: null,
       status: response.status,
     };

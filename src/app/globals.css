@@ -1,15 +1,154 @@
 @import "tailwindcss";
 
-:root {
-  --background: #f4f8fc;
-  --foreground: #0f172a;
-}
-
+/* Design tokens — hex literals in @theme so Tailwind always emits utilities (dev + prod). */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: #f3f4f6;
+  --color-foreground: #0f172a;
+  --color-nav-bg: #0c1222;
+  --color-nav-elevated: #151d2e;
+  --color-nav-muted: #8b95a8;
+  --color-nav-text: #e8ecf4;
+  --color-ws-page: #f3f4f6;
+  --color-ws-raised: #e9eaee;
+  --color-ws-card: #ffffff;
+  --color-ws-border: #e4e6eb;
+  --color-ws-primary: #0f172a;
+  --color-ws-secondary: #5c6578;
+  --color-ws-muted: #8b95a8;
+  --color-brand: #2f6fed;
+  --color-brand-soft: #eef4ff;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+}
+
+:root {
+  --background: #f3f4f6;
+  --foreground: #0f172a;
+  --nav-bg: #0c1222;
+  --nav-elevated: #151d2e;
+  --nav-muted: #8b95a8;
+  --nav-text: #e8ecf4;
+  --ws-page: #f3f4f6;
+  --ws-raised: #e9eaee;
+  --ws-card: #ffffff;
+  --ws-border: #e4e6eb;
+  --ws-primary: #0f172a;
+  --ws-secondary: #5c6578;
+  --ws-muted: #8b95a8;
+  --brand: #2f6fed;
+  --brand-soft: #eef4ff;
+}
+
+@layer components {
+  .workspace-sidebar {
+    background-color: #0c1222;
+    color: #e8ecf4;
+  }
+
+  .workspace-header-band {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e4e6eb;
+  }
+
+  .workspace-main {
+    background-color: #f3f4f6;
+  }
+
+  .workspace-toolbar-band {
+    width: 100%;
+    background-color: #ffffff;
+    border-bottom: 1px solid #e4e6eb;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  }
+
+  .workspace-section-raised {
+    background-color: color-mix(in srgb, #e9eaee 55%, #ffffff);
+    border-bottom: 1px solid #e4e6eb;
+  }
+
+  .referral-hero-container {
+    overflow: hidden;
+    border-radius: 1rem;
+    border: 1px solid color-mix(in srgb, #2f6fed 8%, #e4e6eb);
+    background-color: #ffffff;
+  }
+
+  .referral-hero-action {
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, #eef4ff 55%, #ffffff) 0%,
+      color-mix(in srgb, #eef4ff 25%, #ffffff) 100%
+    );
+  }
+
+  .billing-overview-container {
+    width: 100%;
+    overflow: hidden;
+    border-radius: 1rem;
+    border: 1px solid color-mix(in srgb, #2f6fed 8%, #e4e6eb);
+    background-color: #ffffff;
+    box-shadow:
+      0 1px 2px rgba(15, 23, 42, 0.04),
+      0 8px 24px rgba(15, 23, 42, 0.04);
+  }
+
+  .workspace-accent-text {
+    color: #2f6fed;
+  }
+
+  .workspace-btn-primary {
+    background-color: #0f172a;
+    color: #ffffff;
+  }
+
+  .workspace-btn-primary:hover {
+    background-color: color-mix(in srgb, #0f172a 88%, #ffffff);
+  }
+
+  .workspace-btn-accent {
+    background-color: #2f6fed;
+    color: #ffffff;
+  }
+
+  .workspace-btn-accent:hover {
+    background-color: color-mix(in srgb, #2f6fed 88%, #000000);
+  }
+
+  .billing-credit-hero {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(
+      135deg,
+      #0c1222 0%,
+      #132238 42%,
+      color-mix(in srgb, #2f6fed 72%, #0c1222) 100%
+    );
+    color: #e8ecf4;
+  }
+
+  .billing-credit-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      ellipse 80% 60% at 100% 0%,
+      color-mix(in srgb, #2f6fed 35%, transparent),
+      transparent 70%
+    );
+    pointer-events: none;
+  }
+
+  .billing-credit-glow {
+    position: absolute;
+    right: -2rem;
+    top: -3rem;
+    height: 10rem;
+    width: 10rem;
+    border-radius: 9999px;
+    background: color-mix(in srgb, #2f6fed 28%, transparent);
+    filter: blur(40px);
+    pointer-events: none;
+  }
 }
 
 html {
@@ -19,10 +158,12 @@ html {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 ::selection {
-  background: rgba(14, 165, 233, 0.18);
+  background: rgba(47, 111, 237, 0.18);
   color: var(--foreground);
 }

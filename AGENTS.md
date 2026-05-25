@@ -6,7 +6,11 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # Product Context
 
-Doublle's current product focus is the in-app referral module described in `docs/referral-module-prd.md`. Treat that document as the source of truth when generating code, schemas, UI, APIs, workflows, copy, and operator tooling in this repo.
+Doublle's current product focus is the in-app referral module.
+
+**Agent navigation (read first):** [`docs/PRODUCT_UNDERSTANDING.md`](docs/PRODUCT_UNDERSTANDING.md) — task → file map, routes, API surface, and what is implemented vs stubbed in this repo.
+
+**Business requirements:** [`docs/Doublle_Referral_Module_PRD.md`](docs/Doublle_Referral_Module_PRD.md) — full PRD for rules, flows, admin, and compliance. Treat the PRD as source of truth for product behavior; use PRODUCT_UNDERSTANDING for where to edit code.
 
 - MVP is web-first, logged-in referrers only, with credit-only payouts.
 - Default Standard Program is 5% of referee net revenue for 12 months.

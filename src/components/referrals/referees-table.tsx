@@ -4,6 +4,8 @@ import { useState } from "react";
 
 import { RefereeCommissionSheet } from "@/components/referrals/referee-commission-sheet";
 import { StateBadge } from "@/components/referrals/state-badge";
+import { WorkspaceEmptyState } from "@/components/workspace/workspace-empty-state";
+import { workspaceFluidContentClass } from "@/components/workspace/workspace-content-inset";
 import { formatCurrency, formatDate } from "@/lib/referrals/format";
 import type { RefereeData } from "@/lib/referrals/types";
 
@@ -11,17 +13,24 @@ interface RefereesTableProps {
   referees: RefereeData[];
 }
 
-function EmptyTableState() {
+function UsersIcon() {
   return (
-    <div className="flex min-h-[210px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center">
-      <div>
-        <h3 className="text-lg font-semibold text-slate-900">No referees yet</h3>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">
-          Share your link or code to start tracking clicks, signups, and commissions
-          here.
-        </p>
-      </div>
-    </div>
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
   );
 }
 
@@ -31,12 +40,15 @@ function MoreIcon() {
       width="16"
       height="16"
       viewBox="0 0 16 16"
-      fill="currentColor"
-      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      aria-hidden
     >
-      <circle cx="8" cy="3" r="1.5" />
-      <circle cx="8" cy="8" r="1.5" />
-      <circle cx="8" cy="13" r="1.5" />
+      <circle cx="8" cy="3" r="0.75" fill="currentColor" stroke="none" />
+      <circle cx="8" cy="8" r="0.75" fill="currentColor" stroke="none" />
+      <circle cx="8" cy="13" r="0.75" fill="currentColor" stroke="none" />
     </svg>
   );
 }
@@ -56,7 +68,7 @@ function RowActions({ referee, onViewCommissions }: RowActionsProps) {
         aria-label={`View commission details for ${referee.name}`}
         disabled={!hasCommissions}
         onClick={() => onViewCommissions(referee)}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
+        className="inline-flex h-8 w-8 items-center justify-center rounded-[10px] border border-ws-border bg-ws-card text-ws-secondary transition hover:bg-ws-page hover:text-ws-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 disabled:cursor-not-allowed disabled:opacity-40"
       >
         <MoreIcon />
       </button>
@@ -69,39 +81,49 @@ export function RefereesTable({ referees }: RefereesTableProps) {
 
   return (
     <>
-      <section className="flex flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_12px_32px_rgba(15,23,42,0.05)] sm:p-8">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight text-slate-950">
-              Referees
-            </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Track who signed up with your referral link or code. Use the menu at
-              the end of each row to view commission details.
+      <section className="flex w-full flex-col border-b border-[#e4e6eb] bg-white">
+        <div className="workspace-toolbar-band w-full">
+          <div className={`${workspaceFluidContentClass} py-4`}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight text-ws-primary">
+                Referees
+              </h2>
+              <p className="mt-1 max-w-2xl text-sm leading-relaxed text-ws-secondary">
+                Teams that signed up with your link or code. Open a row menu for commission
+                details.
+              </p>
+            </div>
+            <p className="text-xs text-ws-secondary">
+              <span className="workspace-accent-text font-semibold tabular-nums">
+                {referees.length}
+              </span>
+              {" "}
+              active referral{referees.length === 1 ? "" : "s"}
             </p>
           </div>
-          <div className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm whitespace-nowrap text-slate-600">
-            {referees.length} active referral{referees.length === 1 ? "" : "s"}
           </div>
         </div>
 
-        <div className="mt-6 flex-1">
+        <div className={`${workspaceFluidContentClass} min-h-0 flex-1 py-5`}>
           {referees.length === 0 ? (
-            <EmptyTableState />
+            <WorkspaceEmptyState
+              icon={<UsersIcon />}
+              title="No referees yet"
+              description="Share your link or code to start tracking clicks, signups, and commissions here."
+            />
           ) : (
             <>
-              <div className="grid gap-4 xl:hidden">
+              <div className="grid gap-3 xl:hidden">
                 {referees.map((referee) => (
                   <article
                     key={referee.id}
-                    className="rounded-2xl border border-slate-200 bg-slate-50 p-5"
+                    className="rounded-[10px] border border-ws-border bg-ws-page px-4 py-4"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <h3 className="text-base font-semibold text-slate-950">
-                          {referee.name}
-                        </h3>
-                        <p className="mt-1 text-sm text-slate-600">
+                        <h3 className="text-sm font-semibold text-ws-primary">{referee.name}</h3>
+                        <p className="mt-1 text-sm text-ws-secondary">
                           {referee.company} · {referee.plan}
                         </p>
                       </div>
@@ -114,44 +136,42 @@ export function RefereesTable({ referees }: RefereesTableProps) {
                       </div>
                     </div>
 
-                    <dl className="mt-4 grid grid-cols-2 gap-4 text-sm">
+                    <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
                       <div>
-                        <dt className="text-slate-500">Source</dt>
-                        <dd className="mt-1 font-medium text-slate-900">
-                          {referee.source}
-                        </dd>
+                        <dt className="text-xs text-ws-muted">Source</dt>
+                        <dd className="mt-1 font-medium text-ws-primary">{referee.source}</dd>
                       </div>
                       <div>
-                        <dt className="text-slate-500">Joined</dt>
-                        <dd className="mt-1 font-medium text-slate-900">
+                        <dt className="text-xs text-ws-muted">Joined</dt>
+                        <dd className="mt-1 font-medium text-ws-primary tabular-nums">
                           {formatDate(referee.joinedAt)}
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-slate-500">Referral</dt>
-                        <dd className="mt-1 font-medium text-slate-900">
+                        <dt className="text-xs text-ws-muted">Referral</dt>
+                        <dd className="mt-1 font-medium text-ws-primary">
                           {referee.referralStatus}
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-slate-500">Revenue</dt>
-                        <dd className="mt-1 font-medium text-slate-900">
+                        <dt className="text-xs text-ws-muted">Revenue</dt>
+                        <dd className="mt-1 font-medium text-ws-primary tabular-nums">
                           {formatCurrency(referee.netRevenue)}
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-slate-500">Earned</dt>
+                        <dt className="text-xs text-ws-muted">Earned</dt>
                         <dd
-                          className={`mt-1 font-semibold ${
-                            referee.commission >= 0 ? "text-slate-950" : "text-rose-700"
+                          className={`mt-1 font-semibold tabular-nums ${
+                            referee.commission >= 0 ? "text-ws-primary" : "text-red-800"
                           }`}
                         >
                           {formatCurrency(referee.commission)}
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-slate-500">Next</dt>
-                        <dd className="mt-1 font-medium text-slate-900">
+                        <dt className="text-xs text-ws-muted">Next</dt>
+                        <dd className="mt-1 font-medium text-ws-secondary">
                           {referee.nextEvent}
                         </dd>
                       </div>
@@ -160,87 +180,74 @@ export function RefereesTable({ referees }: RefereesTableProps) {
                 ))}
               </div>
 
-              <div className="-mx-1 hidden overflow-x-auto px-1 xl:block">
-                <table className="w-full min-w-[58rem] table-fixed border-separate border-spacing-y-3">
-                  <colgroup>
-                    <col className="w-[26%]" />
-                    <col className="w-[12%]" />
-                    <col className="w-[11%]" />
-                    <col className="w-[9%]" />
-                    <col className="w-[11%]" />
-                    <col className="w-[9%]" />
-                    <col className="w-[9%]" />
-                    <col className="w-[11%]" />
-                    <col className="w-[3rem]" />
-                  </colgroup>
-                  <thead>
-                    <tr className="text-xs font-medium text-slate-500">
-                      <th className="whitespace-nowrap px-4 pb-3 text-left align-bottom">
+              <div className="hidden max-h-[min(32rem,60vh)] overflow-auto xl:block">
+                <table className="w-full min-w-[58rem] border-collapse text-left text-sm">
+                  <thead className="sticky top-0 z-10 bg-ws-raised">
+                    <tr className="text-xs font-medium text-ws-muted">
+                      <th className="whitespace-nowrap px-4 py-3 text-left font-medium">
                         Referee
                       </th>
-                      <th className="whitespace-nowrap px-4 pb-3 text-left align-bottom">
+                      <th className="whitespace-nowrap px-4 py-3 text-left font-medium">
                         Source
                       </th>
-                      <th className="whitespace-nowrap px-4 pb-3 text-left align-bottom">
+                      <th className="whitespace-nowrap px-4 py-3 text-left font-medium">
                         Joined
                       </th>
-                      <th className="whitespace-nowrap px-4 pb-3 text-left align-bottom">
+                      <th className="whitespace-nowrap px-4 py-3 text-left font-medium">
                         Referral
                       </th>
-                      <th className="whitespace-nowrap px-4 pb-3 text-left align-bottom">
+                      <th className="whitespace-nowrap px-4 py-3 text-left font-medium">
                         Payout
                       </th>
-                      <th className="whitespace-nowrap px-4 pb-3 text-right align-bottom">
+                      <th className="whitespace-nowrap px-4 py-3 text-right font-medium">
                         Revenue
                       </th>
-                      <th className="whitespace-nowrap px-4 pb-3 text-right align-bottom">
+                      <th className="whitespace-nowrap px-4 py-3 text-right font-medium">
                         Earned
                       </th>
-                      <th className="whitespace-nowrap px-4 pb-3 text-left align-bottom">
+                      <th className="whitespace-nowrap px-4 py-3 text-left font-medium">
                         Next
                       </th>
-                      <th className="w-12 px-4 pb-3 text-right align-bottom">
+                      <th className="w-12 px-4 py-3 text-right font-medium">
                         <span className="sr-only">Actions</span>
                       </th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-ws-border">
                     {referees.map((referee) => (
-                      <tr key={referee.id} className="overflow-hidden rounded-2xl bg-slate-50">
-                        <td className="rounded-l-2xl px-4 py-4 align-middle">
-                          <div>
-                            <p className="font-semibold text-slate-950">{referee.name}</p>
-                            <p className="mt-1 text-sm leading-5 text-slate-600">
-                              {referee.company} · {referee.plan}
-                            </p>
-                          </div>
+                      <tr key={referee.id} className="bg-ws-card">
+                        <td className="px-4 py-3.5 align-middle">
+                          <p className="font-semibold text-ws-primary">{referee.name}</p>
+                          <p className="mt-0.5 text-xs text-ws-secondary">
+                            {referee.company} · {referee.plan}
+                          </p>
                         </td>
-                        <td className="whitespace-nowrap px-4 py-4 align-middle text-left text-sm font-medium text-slate-700">
+                        <td className="whitespace-nowrap px-4 py-3.5 align-middle text-ws-secondary">
                           {referee.source}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-4 align-middle text-left text-sm text-slate-700">
+                        <td className="whitespace-nowrap px-4 py-3.5 align-middle tabular-nums text-ws-secondary">
                           {formatDate(referee.joinedAt)}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-4 align-middle text-left text-sm font-medium text-slate-700">
+                        <td className="whitespace-nowrap px-4 py-3.5 align-middle text-ws-secondary">
                           {referee.referralStatus}
                         </td>
-                        <td className="px-4 py-4 align-middle text-left">
+                        <td className="px-4 py-3.5 align-middle">
                           <StateBadge state={referee.commissionState} />
                         </td>
-                        <td className="whitespace-nowrap px-4 py-4 align-middle text-right text-sm font-medium text-slate-900 tabular-nums">
+                        <td className="whitespace-nowrap px-4 py-3.5 align-middle text-right font-medium tabular-nums text-ws-primary">
                           {formatCurrency(referee.netRevenue)}
                         </td>
                         <td
-                          className={`whitespace-nowrap px-4 py-4 align-middle text-right text-sm font-semibold tabular-nums ${
-                            referee.commission >= 0 ? "text-slate-950" : "text-rose-700"
+                          className={`whitespace-nowrap px-4 py-3.5 align-middle text-right font-semibold tabular-nums ${
+                            referee.commission >= 0 ? "text-ws-primary" : "text-red-800"
                           }`}
                         >
                           {formatCurrency(referee.commission)}
                         </td>
-                        <td className="px-4 py-4 align-middle text-left text-sm leading-5 text-slate-700">
+                        <td className="px-4 py-3.5 align-middle text-ws-secondary">
                           {referee.nextEvent}
                         </td>
-                        <td className="rounded-r-2xl px-4 py-4 align-middle text-right">
+                        <td className="px-4 py-3.5 align-middle text-right">
                           <RowActions
                             referee={referee}
                             onViewCommissions={setSheetReferee}

@@ -129,6 +129,19 @@ export function formatRefereeBenefitLabel(benefit: RefereeBenefit | null): strin
   const type = benefit.type.toUpperCase();
   if (type === "CREDIT" && benefit.value) {
     const amount = Number(benefit.value);
+    const currency = benefit.currency?.trim().toUpperCase();
+    if (Number.isFinite(amount) && currency) {
+      try {
+        const formatted = new Intl.NumberFormat(undefined, {
+          style: "currency",
+          currency,
+          maximumFractionDigits: 0,
+        }).format(amount);
+        return `${formatted} credit`;
+      } catch {
+        return `${benefit.value} ${currency} credit`;
+      }
+    }
     if (Number.isFinite(amount)) {
       return `${amount} credits`;
     }

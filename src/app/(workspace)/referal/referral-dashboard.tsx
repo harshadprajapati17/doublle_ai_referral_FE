@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { DashboardShell } from "@/components/referrals/dashboard-shell";
+import { WorkspaceMainLoading } from "@/components/workspace/workspace-main-loading";
 import { MockServerState } from "@/components/referrals/mock-server-state";
 import { getClientSessionUser } from "@/lib/referrals/auth-token";
 import { buildReferrerDashboardAfterTermsAccept } from "@/lib/referrals/build-referrer-dashboard";
@@ -62,9 +63,9 @@ function issueCopy(issue: LoadIssue): { title: string; description: string } {
     case "api_unreachable":
     default:
       return {
-        title: "Referral dashboard unavailable",
+        title: "Dashboard not available",
         description:
-          "We could not load /api/v1/referral/program or /api/v1/referral/me/dashboard. Ensure the auth API is running at your configured base URL and check DevTools → Network for failures (CORS, 404, 500).",
+          "We couldn't load your referral dashboard right now. Refresh the page and try again.",
       };
   }
 }
@@ -171,32 +172,19 @@ export function ReferralDashboard({ apiConfigured }: ReferralDashboardProps) {
   }, [reloadDashboard]);
 
   if (loading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,_#f4f7fb_0%,_#eef3f8_100%)]">
-        <p className="text-sm font-medium text-slate-600">Loading referral dashboard…</p>
-      </main>
-    );
+    return <WorkspaceMainLoading label="Loading referral dashboard…" />;
   }
 
   if (loadIssue || !data || !user) {
     const copy = issueCopy(loadIssue ?? "api_unreachable");
     return (
-      <MockServerState
-        title={copy.title}
-        description={copy.description}
-        signInHref={
-          loadIssue === "no_session" || loadIssue === "unauthorized"
-            ? "/login?returnTo=/referal"
-            : undefined
-        }
-      />
+      <MockServerState title={copy.title} description={copy.description} />
     );
   }
 
   return (
     <DashboardShell
       data={data}
-      user={user}
       termsError={termsError}
       onAcceptTerms={onAcceptTerms}
       acceptTermsPending={acceptPending}

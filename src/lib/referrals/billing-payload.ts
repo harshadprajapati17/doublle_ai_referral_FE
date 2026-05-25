@@ -4,6 +4,12 @@ import {
   type RefereeBenefit,
 } from "@/lib/referrals/validate-referral-code";
 
+export type BillingAccountCredits = {
+  total: number | null;
+  used: number | null;
+  remaining: number | null;
+};
+
 export type BillingSubscription = {
   id: string;
   planName: string;
@@ -11,14 +17,22 @@ export type BillingSubscription = {
   frequency: string | null;
   currentPeriodStart: string | null;
   currentPeriodEnd: string | null;
+  nextChargeAt: string | null;
   amount: number | null;
   currency: string | null;
   cancelAtPeriodEnd: boolean;
+  creditsUsed: number | null;
+  creditsTotal: number | null;
+  creditsRemaining: number | null;
 };
 
 export type BillingRefereeBenefit = {
   code: string;
   status: string;
+  referralStatus: string | null;
+  programId: string | null;
+  referralId: string | null;
+  applied: boolean;
   benefit: RefereeBenefit | null;
   benefitLabel: string | null;
   appliedAt: string | null;
@@ -26,6 +40,7 @@ export type BillingRefereeBenefit = {
 
 export type BillingSubscriptionsMePayload = {
   subscriptions: BillingSubscription[];
+  accountCredits: BillingAccountCredits | null;
   refereeBenefit: BillingRefereeBenefit | null;
 };
 
@@ -46,7 +61,26 @@ export function filterActiveSubscriptions(
 export function isAppliedRefereeBenefit(
   benefit: BillingRefereeBenefit | null,
 ): benefit is BillingRefereeBenefit {
-  return benefit !== null && benefit.status.trim().toUpperCase() === "APPLIED";
+  if (!benefit) {
+    return false;
+  }
+  if (benefit.applied) {
+    return true;
+  }
+  return benefit.status.trim().toUpperCase() === "APPLIED";
+}
+
+/** Show promo when API returned a referral code and a recognizable benefit. */
+export function hasRefereeBenefitPromo(
+  benefit: BillingRefereeBenefit | null,
+): benefit is BillingRefereeBenefit {
+  if (!benefit?.code.trim()) {
+    return false;
+  }
+  if (benefit.benefitLabel) {
+    return true;
+  }
+  return benefit.benefit !== null && Boolean(benefit.benefit.type.trim());
 }
 
 function pickString(record: Record<string, unknown>, ...keys: string[]): string {
@@ -155,6 +189,13 @@ function subscriptionFromRecord(row: Record<string, unknown>): BillingSubscripti
       "periodEnd",
       "period_end",
     ),
+    nextChargeAt: pickIsoDate(
+      row,
+      "nextChargeAt",
+      "next_charge_at",
+      "nextBillingAt",
+      "next_billing_at",
+    ),
     amount: resolveAmount(row),
     currency: pickString(row, "currency") || null,
     cancelAtPeriodEnd: pickBoolean(
@@ -165,7 +206,69 @@ function subscriptionFromRecord(row: Record<string, unknown>): BillingSubscripti
       "cancel_at_period_end",
       "cancelAtEnd",
     ),
+    creditsUsed: pickNumber(
+      row,
+      "creditsUsed",
+      "credits_used",
+      "creditUsed",
+      "credit_used",
+      "usedCredits",
+      "used_credits",
+    ),
+    creditsTotal: pickNumber(
+      row,
+      "creditsTotal",
+      "credits_total",
+      "creditTotal",
+      "credit_total",
+      "totalCredits",
+      "total_credits",
+    ),
+    creditsRemaining: pickNumber(
+      row,
+      "creditsRemaining",
+      "credits_remaining",
+      "creditRemaining",
+      "credit_remaining",
+      "remainingCredits",
+      "remaining_credits",
+    ),
   };
+}
+
+function parseAccountCreditsFromRow(row: Record<string, unknown>): BillingAccountCredits | null {
+  const nested =
+    row.credits && typeof row.credits === "object"
+      ? (row.credits as Record<string, unknown>)
+      : row.accountCredits && typeof row.accountCredits === "object"
+        ? (row.accountCredits as Record<string, unknown>)
+        : row.account_credits && typeof row.account_credits === "object"
+          ? (row.account_credits as Record<string, unknown>)
+          : row;
+
+  const total = pickNumber(
+    nested,
+    "total",
+    "totalCredits",
+    "total_credits",
+    "balance",
+    "creditBalance",
+    "credit_balance",
+  );
+  const used = pickNumber(nested, "used", "usedCredits", "used_credits", "consumed");
+  const remaining = pickNumber(
+    nested,
+    "remaining",
+    "remainingCredits",
+    "remaining_credits",
+    "available",
+  );
+
+  if (total === null && used === null && remaining === null) {
+    return null;
+  }
+
+  return { total, used, remaining };
 }
 
 function parseRefereeBenefitFromMe(row: Record<string, unknown>): BillingRefereeBenefit | null {
@@ -183,10 +286,29 @@ function parseRefereeBenefitFromMe(row: Record<string, unknown>): BillingReferee
   return {
     code,
     status,
+    referralStatus:
+      pickString(row, "referralStatus", "referral_status") || null,
+    programId: pickString(row, "programId", "program_id") || null,
+    referralId: pickString(row, "referralId", "referral_id") || null,
+    applied: pickBoolean(row, "applied"),
     benefit: nestedBenefit,
     benefitLabel: formatRefereeBenefitLabel(nestedBenefit),
     appliedAt: pickIsoDate(row, "appliedAt", "applied_at"),
   };
+}
+
+/** Credit units from referee benefit (CREDIT type value field). */
+export function refereeBenefitCreditAmount(
+  benefit: BillingRefereeBenefit | null,
+): number {
+  if (!benefit?.benefit) {
+    return 0;
+  }
+  if (benefit.benefit.type.trim().toUpperCase() !== "CREDIT") {
+    return 0;
+  }
+  const amount = Number(benefit.benefit.value);
+  return Number.isFinite(amount) && amount > 0 ? amount : 0;
 }
 
 function extractDataEnvelope(json: unknown): Record<string, unknown> | null {
@@ -249,7 +371,7 @@ function collectSubscriptionRecords(data: Record<string, unknown>): Record<strin
 export function parseBillingSubscriptionsMeJson(json: unknown): BillingSubscriptionsMePayload {
   const data = extractDataEnvelope(json);
   if (!data) {
-    return { subscriptions: [], refereeBenefit: null };
+    return { subscriptions: [], accountCredits: null, refereeBenefit: null };
   }
 
   const rows = collectSubscriptionRecords(data);
@@ -268,5 +390,7 @@ export function parseBillingSubscriptionsMeJson(json: unknown): BillingSubscript
       ? parseRefereeBenefitFromMe(refereeRow as Record<string, unknown>)
       : null;
 
-  return { subscriptions, refereeBenefit };
+  const accountCredits = parseAccountCreditsFromRow(data);
+
+  return { subscriptions, accountCredits, refereeBenefit };
 }

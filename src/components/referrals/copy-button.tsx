@@ -79,7 +79,7 @@ export function CopyButton({
       <button
         type="button"
         onClick={handleCopy}
-        className={`inline-flex h-full min-h-[2.75rem] items-center justify-center px-4 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-950 focus:outline-none focus-visible:bg-slate-50 focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:ring-inset ${
+        className={`inline-flex h-full min-h-[2.75rem] items-center justify-center px-4 text-xs font-medium text-ws-secondary transition hover:bg-ws-page hover:text-ws-primary focus:outline-none focus-visible:bg-ws-page focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-inset ${
           status === "copied" ? "text-emerald-700" : ""
         } ${className}`}
         aria-label={buttonLabel}
@@ -94,7 +94,7 @@ export function CopyButton({
       <button
         type="button"
         onClick={handleCopy}
-        className={`inline-flex shrink-0 items-center gap-1.5 border-l border-slate-200 bg-slate-900 px-3.5 py-2.5 text-xs font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-inset ${
+        className={`workspace-btn-primary inline-flex shrink-0 items-center gap-1.5 border-l border-[#e4e6eb] px-3.5 py-2.5 text-xs font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2f6fed] focus-visible:ring-inset ${
           status === "copied" ? "bg-emerald-700 hover:bg-emerald-700" : ""
         } ${className}`}
         aria-label={buttonLabel}
@@ -111,10 +111,10 @@ export function CopyButton({
       <button
         type="button"
         onClick={handleCopy}
-        className={`inline-flex w-full items-center justify-center gap-1.5 bg-slate-950 font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 ${
+        className={`inline-flex w-full items-center justify-center gap-1.5 bg-ws-primary text-sm font-medium text-white transition hover:bg-ws-primary/90 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 ${
           compact
-            ? "rounded-lg px-3 py-2 text-xs shadow-sm"
-            : "rounded-xl px-4 py-3 text-sm shadow-[0_8px_24px_rgba(15,23,42,0.18)]"
+            ? "rounded-[10px] px-3 py-2 text-xs"
+            : "rounded-[10px] px-4 py-2.5 text-sm"
         } ${className}`}
         aria-label={buttonLabel}
       >
@@ -129,10 +129,10 @@ export function CopyButton({
       <button
         type="button"
         onClick={handleCopy}
-        className={`inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 ${
+        className={`inline-flex h-9 w-9 items-center justify-center rounded-[10px] text-ws-secondary transition focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 ${
           status === "copied"
-            ? "bg-emerald-50 text-emerald-700"
-            : "hover:bg-slate-100 hover:text-slate-950"
+            ? "bg-emerald-50 text-emerald-800"
+            : "hover:bg-ws-page hover:text-ws-primary"
         }`}
         aria-label={buttonLabel}
       >

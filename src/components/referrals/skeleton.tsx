@@ -2,9 +2,10 @@ function SkeletonBlock({ className }: { className: string }) {
   return <div className={`animate-pulse rounded-2xl bg-slate-200/80 ${className}`} />;
 }
 
-export function DashboardLoading() {
+/** Main-pane skeleton while referral route segment loads (sidebar stays mounted). */
+export function ReferralMainLoading() {
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.12),_transparent_28%),linear-gradient(180deg,_#f8fbff_0%,_#eef4fb_100%)]">
+    <div className="bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.12),_transparent_28%),linear-gradient(180deg,_#f8fbff_0%,_#eef4fb_100%)]">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
         <section className="rounded-2xl border border-slate-200 bg-white/95 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] sm:p-8">
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
@@ -68,6 +69,11 @@ export function DashboardLoading() {
           </div>
         </section>
       </div>
-    </main>
+    </div>
   );
+}
+
+/** @deprecated Use {@link ReferralMainLoading} inside the workspace layout. */
+export function DashboardLoading() {
+  return <ReferralMainLoading />;
 }

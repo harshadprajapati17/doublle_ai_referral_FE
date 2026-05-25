@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 
 import { AdminReferralsTable } from "@/components/referrals/admin-referrals-table";
+import { WorkspaceModuleHeader } from "@/components/workspace/workspace-module-header";
+import { workspaceFluidContentClass } from "@/components/workspace/workspace-content-inset";
 import { getAdminReferralRows } from "@/lib/referrals/get-admin-referrals";
 
 export const metadata: Metadata = {
@@ -12,21 +14,17 @@ export default async function AdminPage() {
   const referrals = await getAdminReferralRows();
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.12),_transparent_28%),linear-gradient(180deg,_#f8fbff_0%,_#eef4fb_100%)]">
-      <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-10 sm:px-6 lg:px-8">
-        <header className="space-y-3">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sky-700">
-            Internal admin
-          </p>
-          <h1 className="text-4xl font-semibold tracking-tight text-slate-950">
-            Referral operations
-          </h1>
-          <p className="max-w-3xl text-base leading-7 text-slate-600">
-            Connect this view to your admin referral API when you need operator tooling.
-            Until then this table stays empty by design.
-          </p>
-        </header>
+    <main className="flex min-h-dvh flex-col bg-white">
+      <header className="workspace-header-band w-full shrink-0">
+        <div className={`py-3.5 sm:py-4 ${workspaceFluidContentClass}`}>
+          <WorkspaceModuleHeader
+            title="Referral operations"
+            description="Review referral activity across referrers when the admin API is connected."
+          />
+        </div>
+      </header>
 
+      <div className="min-h-0 w-full flex-1 overflow-y-auto pb-8">
         <AdminReferralsTable referrals={referrals} />
       </div>
     </main>
