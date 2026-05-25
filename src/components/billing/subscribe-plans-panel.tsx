@@ -2,9 +2,7 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 
-import { AccountCreditBalance } from "@/components/billing/account-credit-balance";
 import { createBillingSubscriptionClient } from "@/lib/billing/create-subscription";
-import type { BillingRefereeBenefit } from "@/lib/referrals/billing-payload";
 import {
   getCheckoutPlans,
   isPaymentsEnabled,
@@ -15,7 +13,6 @@ import { openRazorpaySubscriptionCheckout } from "@/lib/billing/razorpay";
 
 type SubscribePlansPanelProps = {
   onSubscriptionActivated: () => void | Promise<void>;
-  refereeBenefit?: BillingRefereeBenefit | null;
 };
 
 type PaymentReceipt = {
@@ -130,7 +127,6 @@ function SubscribePlanCard({
 
 export function SubscribePlansPanel({
   onSubscriptionActivated,
-  refereeBenefit = null,
 }: SubscribePlansPanelProps) {
   const paymentsEnabled = isPaymentsEnabled();
   const plans = getCheckoutPlans();
@@ -258,45 +254,16 @@ export function SubscribePlansPanel({
 
   const checkoutDisabled = !sdkReady || activating;
 
-  const previewPlan =
-    (checkoutPlanKey ? plans.find((plan) => plan.key === checkoutPlanKey) : null) ??
-    plans.find((plan) => plan.highlighted) ??
-    plans[0];
-
   return (
     <div className="billing-overview-container w-full overflow-hidden">
-      {previewPlan ? (
-        <AccountCreditBalance
-          planPayment={{
-            paymentAmount: previewPlan.amount,
-            currency: previewPlan.currency,
-          }}
-          refereeBenefit={refereeBenefit}
-        />
-      ) : null}
+      <div className={`border-b border-ws-border py-4 ${insetClass}`}>
+        <h3 className="text-sm font-semibold text-ws-primary">Choose a plan</h3>
+        <p className="mt-1 text-xs text-ws-secondary">
+          Secure Razorpay checkout. Your subscription and credits appear here after payment.
+        </p>
+      </div>
 
-      {previewPlan ? (
-        <div
-          className={`flex w-full items-center justify-between gap-4 border-t border-ws-border bg-ws-page/40 py-3.5 text-sm ${insetClass}`}
-        >
-          <span className="text-ws-secondary">
-            Plan payment · <span className="font-medium text-ws-primary">{previewPlan.label}</span>
-          </span>
-          <span className="font-semibold tabular-nums text-ws-primary">
-            {formatPlanPrice(previewPlan.amount, previewPlan.currency)}
-          </span>
-        </div>
-      ) : null}
-
-      <div className="w-full border-t border-ws-border">
-        <div className={`border-b border-ws-border py-4 ${insetClass}`}>
-          <h3 className="text-sm font-semibold text-ws-primary">Choose a plan</h3>
-          <p className="mt-1 text-xs text-ws-secondary">
-            Secure Razorpay checkout. Subscription details appear above after payment.
-          </p>
-        </div>
-
-        <div className={insetClass + " py-5"}>
+      <div className={insetClass + " py-5"}>
         {error ? (
           <div className="mb-3">
             <BillingNotice tone="error">{error}</BillingNotice>
@@ -329,7 +296,6 @@ export function SubscribePlansPanel({
               onSelect={() => void startCheckout(plan)}
             />
           ))}
-        </div>
         </div>
       </div>
     </div>

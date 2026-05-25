@@ -92,10 +92,7 @@ export function WorkspaceDashboard() {
       ) : activeSubscriptions.length === 0 ? (
         <section className="w-full">
           <div className={fluidPageClass}>
-            <SubscribePlansPanel
-              refereeBenefit={refereeBenefit}
-              onSubscriptionActivated={refreshBilling}
-            />
+            <SubscribePlansPanel onSubscriptionActivated={refreshBilling} />
           </div>
         </section>
       ) : (
